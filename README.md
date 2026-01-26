@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 GitHub repo: https://github.com/cafeTechne/antigravity-link-extension
+
 Open VSX: https://open-vsx.org/extension/cafetechne/antigravity-link-extension
 
 Bring your Antigravity sessions to your phone. Upload files, dictate prompts, and control multiple active Antigravity chats from a mobile-friendly interface.
