@@ -1,5 +1,13 @@
 # Antigravity Link (VS Code Extension)
 
+[![Open VSX Version](https://img.shields.io/open-vsx/v/cafetechne/antigravity-link-extension)](https://open-vsx.org/extension/cafetechne/antigravity-link-extension)
+[![Open VSX Downloads](https://img.shields.io/open-vsx/dt/cafetechne/antigravity-link-extension)](https://open-vsx.org/extension/cafetechne/antigravity-link-extension)
+[![GitHub Stars](https://img.shields.io/github/stars/cafeTechne/antigravity-link-extension)](https://github.com/cafeTechne/antigravity-link-extension/stargazers)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+GitHub repo: https://github.com/cafeTechne/antigravity-link-extension
+Open VSX: https://open-vsx.org/extension/cafetechne/antigravity-link-extension
+
 Bring your Antigravity sessions to your phone. Upload files, dictate prompts, and control multiple active Antigravity chats from a mobile-friendly interface.
 
 ## Who this is for
@@ -83,6 +91,10 @@ If your *workspace* contains `public/` or `uploads/`, the extension will prefer 
 - **No instances found**: Make sure every Antigravity window was launched with the `--remote-debugging-port` command shown above.
 - **Can't connect from mobile**: Ensure your phone and computer are on the same network.
 - **Uploads save but don't appear in chat**: Switch to the correct Active Instance in the mobile UI.
+
+## Contributing
+
+We are accepting pull requests and actively looking for contributors. If you want to help, check the TODOs in the codebase or open an issue to discuss ideas.
 
 ## License
 
