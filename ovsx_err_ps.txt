@@ -1,0 +1,13 @@
+﻿npx : Γ¥î  Extension cafetechne.antigravity-link-extension 1.0.4 is 
+already published.
+At line:1 char:11
++ $output = npx -y ovsx publish 
+antigravity-link-extension-1.0.4.vsix - ...
++           
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Γ¥î  Extension ...eady  
+   published.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+See the documentation for more information:
+https://github.com/eclipse/openvsx/wiki/Publishing-Extensions
