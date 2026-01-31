@@ -3,7 +3,7 @@
     "displayName": "Antigravity Link",
     "description": "Mobile upload and voice-to-text bridge for Antigravity",
     "icon": "icon.png",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "license": "MIT",
     "engines": {
         "vscode": "^1.90.0"

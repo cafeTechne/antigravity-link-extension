@@ -38,6 +38,7 @@ export class AntigravityServer {
     private wss?: WebSocketServer;
     private uploadsDir: string;
     private publicDir: string;
+    private extensionPath: string;
     private port: number;
     private useHttps: boolean;
     private _localUrl = '';
@@ -49,6 +50,7 @@ export class AntigravityServer {
     constructor(port: number, extensionPath: string, workspaceRoot?: string, useHttps = true) {
         this.port = port;
         this.useHttps = useHttps;
+        this.extensionPath = extensionPath;
         this.app = express();
         // Prefer workspace root uploads/public (matches npm run dev), fall back to extension path
         const rootBase = workspaceRoot || process.cwd();
@@ -69,9 +71,9 @@ export class AntigravityServer {
         this.useAuth = true;
         this.authToken = this.loadOrCreateToken(extensionPath);
 
-                if (!fs.existsSync(this.uploadsDir)) {
-                    fs.mkdirSync(this.uploadsDir, { recursive: true });
-                }
+        if (!fs.existsSync(this.uploadsDir)) {
+            fs.mkdirSync(this.uploadsDir, { recursive: true });
+        }
 
         this.configureMiddleware();
         this.configureRoutes();
@@ -435,8 +437,8 @@ export class AntigravityServer {
         return new Promise(async (resolve, reject) => {
             try {
                 if (this.useHttps) {
-                    const certPath = path.join(process.cwd(), CERT_FILENAME);
-                    const keyPath = path.join(process.cwd(), KEY_FILENAME);
+                    const certPath = path.join(this.extensionPath, CERT_FILENAME);
+                    const keyPath = path.join(this.extensionPath, KEY_FILENAME);
                     let cert: string | Buffer;
                     let key: string | Buffer;
                     if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {

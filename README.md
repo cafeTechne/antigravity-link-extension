@@ -93,9 +93,18 @@ If your *workspace* contains `public/` or `uploads/`, the extension will prefer 
 - **Can't connect from mobile**: Ensure your phone and computer are on the same network.
 - **Uploads save but don't appear in chat**: Switch to the correct Active Instance in the mobile UI.
 
+## FAQ
+
+1) **It does not work unless Antigravity is launched with the debug port.**
+Use the exact launch command shown in the Quick start section. Any Antigravity window started without `--remote-debugging-port` cannot be discovered or controlled.
+
+2) **Can I run multiple sessions?**
+Yes. Multiple Antigravity windows are supported as long as each one is launched with the command shown above.
+
 ## Contributing
 
 We are accepting pull requests and actively looking for contributors. If you want to help, check the TODOs in the codebase or open an issue to discuss ideas.
+See `CONTRIBUTING.md` for setup and PR notes.
 
 ## License
 
