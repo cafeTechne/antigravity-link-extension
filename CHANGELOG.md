@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.10
+
+- Fix: Resilient DOM selectors for message injection (fixes broken chat in Google update).
+- Fix: Hide legacy UI elements (Review Changes, Mic, etc.) in mobile client via post-processing.
+- Improved diagnostic probing for future rapid fixes.
+
+
 ## 1.0.9
 
 - Correct repository and issue URLs in `package.json` and `CHANGELOG.md`.

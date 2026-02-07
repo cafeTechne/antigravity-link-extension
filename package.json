@@ -3,7 +3,7 @@
     "displayName": "Antigravity Link",
     "description": "Mobile upload and voice-to-text bridge for Antigravity",
     "icon": "icon.png",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "license": "MIT",
     "engines": {
         "vscode": "^1.90.0"
@@ -67,7 +67,7 @@
         "typecheck": "tsc -p ./ --noEmit",
         "bundle": "node ./esbuild.js",
         "package": "vsce package",
-        "test": "mocha -r ts-node/register src/test/injectFile.test.ts"
+        "test": "mocha -r ts-node/register src/test/injectFile.test.ts src/test/injectMessage.test.ts"
     },
     "devDependencies": {
         "@types/chai": "^5.2.3",

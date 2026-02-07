@@ -680,10 +680,15 @@
                     #chatContent button[aria-label="Send"],
                     #chatContent button[aria-label*="Send"], /* Catch "Send message" etc */
                     #chatContent button[aria-label="Attach"],
+                    #chatContent button[aria-label*="voice"],
+                    #chatContent button[aria-label*="Voice"],
+                    #chatContent button[aria-label*="mic"],
                     
-                    /* Hide the bottom bar with icons safely by scoping to chat content */
+                     /* Hide the bottom bar with icons safely by scoping to chat content */
                     #chatContent div:has(> div[role="button"][aria-haspopup="dialog"]),
-                    #chatContent div:has(> input[type="file"]) {
+                    #chatContent div:has(> input[type="file"]),
+                    #chatContent div.outline-solid.relative.z-20, /* Review changes container */
+                    #chatContent div:has(> div:contains("Ask anything")) {
                         display: none !important;
                     }
                     
@@ -696,6 +701,23 @@
                 </style>
                 ${data.html}
             `;
+
+            // NEW: Cleanup legacy UI elements by text content (highly robust post-processing)
+            chatContent.querySelectorAll('button, [role="button"], span, div').forEach(el => {
+                const text = (el.innerText || '').trim();
+                const blackList = [
+                    'Review Changes', 'Submit', 'Proceed', 'Relocate', 'Always run',
+                    'Thinking...', 'Thought for', 'Stop', 'Accept', 'Reject',
+                    'Ask anything', 'Planning', 'Model'
+                ];
+                if (blackList.some(b => text.startsWith(b))) {
+                    // Find the nearest logical container to hide
+                    const target = el.closest('button, [role="button"], div.outline-solid, div.isolate, div.flex-row') || el;
+                    if (target) {
+                        target.style.setProperty('display', 'none', 'important');
+                    }
+                }
+            });
 
             if (!initialScrollDone) {
                 // Force a double-RAF scroll on first render to land at the newest content

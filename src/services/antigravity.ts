@@ -4,14 +4,25 @@ import { convertVsCodeIcons } from '../utils';
 // Scripts
 const CAPTURE_SCRIPT = `(() => {
     try {
-        const cascade = document.getElementById('cascade');
-        let cleanHtml;
+        const containerSelectors = [
+            '#cascade',
+            '.titlebar.cascade-panel-open',
+            '.cascade-bar',
+            '[id="workbench.parts.titlebar"]'
+        ];
         
+        let cascade;
+        for (const sel of containerSelectors) {
+            cascade = document.querySelector(sel);
+            if (cascade) break;
+        }
+        
+        let cleanHtml;
         if (cascade) {
             const clone = cascade.cloneNode(true);
             const input = clone.querySelector('[contenteditable="true"]')?.closest('div[id^="cascade"] > div');
             if (input) input.remove();
-            cleanHtml = clone.outerHTML;
+            cleanHtml = (clone as HTMLElement).outerHTML;
         } else {
             cleanHtml = document.body.outerHTML;
         }
@@ -78,10 +89,23 @@ export async function injectMessage(cdp: CDPConnection, text: string): Promise<I
     const safeText = JSON.stringify(text);
 
     const EXPRESSION = `(async () => {
-        // Find visible editor
-        const editors = [...document.querySelectorAll('#cascade [data-lexical-editor="true"][contenteditable="true"][role="textbox"]')]
-            .filter(el => el.offsetParent !== null);
-        const editor = editors.at(-1);
+        // Find visible editor - Broad discovery
+        const editorSelectors = [
+            '#cascade [data-lexical-editor="true"][contenteditable="true"]',
+            '[data-lexical-editor="true"][contenteditable="true"]',
+            '[contenteditable="true"][role="textbox"]',
+            'div.max-h-\\\\[300px\\\\].rounded.cursor-text' // New Tailwind-based selector
+        ];
+
+        let editor = null;
+        for (const sel of editorSelectors) {
+            const el = [...document.querySelectorAll(sel)].filter(e => e.offsetParent !== null).at(-1);
+            if (el) {
+                editor = el;
+                break;
+            }
+        }
+
         if (!editor) return { ok:false, reason:"editor_not_found" };
 
         editor.focus();
@@ -98,8 +122,24 @@ export async function injectMessage(cdp: CDPConnection, text: string): Promise<I
 
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-        const submit = document.querySelector("svg.lucide-arrow-right")?.closest("button");
-        if (submit && !submit.disabled) {
+        // Submit Button Discovery
+        const submitSelectors = [
+            'svg.lucide-arrow-right',
+            'svg.lucide-arrow-up',
+            'button[aria-label*="Send"]',
+            'button[aria-label*="Submit"]'
+        ];
+
+        let submit = null;
+        for (const sel of submitSelectors) {
+            const el = document.querySelector(sel)?.closest("button");
+            if (el && !el.disabled && el.offsetParent !== null) {
+                submit = el;
+                break;
+            }
+        }
+
+        if (submit) {
             submit.click();
             return { ok:true, method:"click_submit" };
         }
