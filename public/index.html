@@ -1,608 +1,939 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1a1a1a">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#1a1a1a" />
     <title>Antigravity Link</title>
     <style>
+      :root {
+        /* Material 3 Color Roles (Dark Theme) */
+        --m3-primary: #d0bcff;
+        --m3-on-primary: #381e72;
+        --m3-primary-container: #4f378b;
+        --m3-on-primary-container: #eaddff;
+        --m3-secondary: #ccc2dc;
+        --m3-on-secondary: #332d41;
+        --m3-secondary-container: #4a4458;
+        --m3-on-secondary-container: #e8def8;
+        --m3-tertiary: #efb8c8;
+        --m3-on-tertiary: #492532;
+        --m3-tertiary-container: #633b48;
+        --m3-on-tertiary-container: #ffd8e4;
+        --m3-error: #f2b8b5;
+        --m3-on-error: #601410;
+        --m3-outline: #938f99;
+        --m3-surface: #1c1b1f;
+        --m3-on-surface: #e6e1e9;
+        --m3-surface-variant: #49454f;
+        --m3-on-surface-variant: #cac4d0;
+        --m3-surface-container: #211f26;
+        --m3-surface-container-high: #2b2930;
+
+        /* Legacy compatibility map */
+        --bg-deep: var(--m3-surface);
+        --bg-dock: var(--m3-surface-container);
+        --accent: var(--m3-primary);
+        --border: var(--m3-outline);
+        --text-main: var(--m3-on-surface);
+        --text-dim: var(--m3-on-surface-variant);
+
+        /* Shape Tokens */
+        --m3-shape-extra-small: 4px;
+        --m3-shape-small: 8px;
+        --m3-shape-medium: 12px;
+        --m3-shape-large: 16px;
+        --m3-shape-extra-large: 28px;
+        --m3-shape-full: 9999px;
+
+        /* Standard Spacing (M3 8dp grid) */
+        --space-4: 4px;
+        --space-8: 8px;
+        --space-12: 12px;
+        --space-16: 16px;
+        --space-24: 24px;
+        --space-32: 32px;
+
+        /* Fluid Spacing tokens */
+        --space-xs: clamp(4px, 1vw, 8px);
+        --space-sm: clamp(8px, 2vw, 12px);
+        --space-md: clamp(12px, 3vw, 20px);
+        --space-lg: clamp(16px, 4vw, 32px);
+
+        /* M3 Typography Scale (Fluid) */
+        --font-label-small: clamp(10px, 2.5vw, 11px);
+        --font-label-medium: clamp(11px, 2.8vw, 12px);
+        --font-body-small: clamp(12px, 3vw, 12px);
+        --font-body-medium: clamp(13px, 3.2vw, 14px);
+        --font-body-large: clamp(14px, 3.5vw, 16px);
+        --font-title-medium: clamp(15px, 3.8vw, 16px);
+        --font-title-large: clamp(18px, 4.5vw, 22px);
+
+        /* Touch Targets */
+        --touch-target-min: 44px;
+        --touch-target-comfortable: 48px;
+
+        /* Layout */
+        --dock-max-width: 620px;
+        --content-max-width: 800px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html {
+        overflow: hidden;
+        height: 100%;
+      }
+
+      body {
+        font-family:
+          -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        background: var(--bg-deep);
+        color: var(--text-main);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* --- Chat Area --- */
+      .chat-container {
+        flex: 1;
+        overflow-y: auto;
+        position: relative;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 20px;
+        padding-top: calc(
+          70px + env(safe-area-inset-top, 0)
+        ); /* Clears fixed header bar */
+      }
+
+      .chat-content {
+        padding: 60px 16px 0; /* 60px top clears fixed badges */
+        min-height: auto;
+      }
+
+      /* --- M3 Surface Container (Bottom Dock) --- */
+      .bottom-dock {
+        background: var(--m3-surface-container-high);
+        border-top: 1px solid var(--m3-surface-variant);
+        display: flex;
+        flex-direction: column;
+        padding-bottom: env(safe-area-inset-bottom, 12px);
+        z-index: 1000;
+        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+        /* M3 responsive container logic */
+        width: 100%;
+        max-width: var(--dock-max-width);
+        margin: 0 auto;
+        border-radius: 28px 28px 0 0;
+      }
+
+      /* Top Layer: Control Chips */
+      .dock-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        border-bottom: 1px solid hsla(0, 0%, 100%, 0.05);
+        width: 100%;
+      }
+
+      .dock-controls::-webkit-scrollbar {
+        display: none;
+      }
+
+      .control-chip {
+        background: rgba(118, 118, 128, 0.12);
+        border: none;
+        padding: 6px 14px;
+        border-radius: 99px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-dim);
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+        letter-spacing: -0.01em;
+      }
+
+      .control-chip:active {
+        transform: scale(0.96);
+        background: rgba(118, 118, 128, 0.24);
+      }
+
+      .control-chip .label {
+        font-size: 9px;
+        opacity: 0.6;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+      }
+
+      .control-chip.active {
+        color: #fff;
+        background: #007aff;
+        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+      }
+
+      /* Bottom Layer: Input Row */
+      .dock-input-row {
+        padding: 10px 16px;
+        display: flex;
+        align-items: flex-end; /* Align to bottom for multiline growth */
+        gap: 12px;
+        min-height: 60px;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      .action-stack {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: 4px;
+        padding-bottom: 2px;
+        flex-shrink: 0;
+      }
+
+      /* --- M3 Filled Text Field styling --- */
+      .input-bubble {
+        flex: 1;
+        background: var(--m3-surface-container-high);
+        border-radius: var(--m3-shape-small);
+        display: flex;
+        align-items: center;
+        padding: 8px 16px;
+        position: relative;
+        border-bottom: 2px solid var(--m3-outline);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        min-width: 0;
+      }
+
+      .input-bubble:focus-within {
+        background: var(--m3-surface-variant);
+        border-bottom-color: var(--m3-primary);
+      }
+
+      #messageInput {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--m3-on-surface);
+        font-size: var(--font-body-large);
+        font-family: inherit;
+        line-height: 1.5;
+        padding: 4px 0;
+        margin: 0;
+        resize: none;
+        max-height: 150px;
+      }
+
+      /* --- M3 Icon Button --- */
+      .action-btn {
+        width: var(--touch-target-min);
+        height: var(--touch-target-min);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--m3-shape-full);
+        color: var(--m3-on-surface-variant);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s;
+        flex-shrink: 0;
+        position: relative;
+      }
+
+      .action-btn:hover {
+        background: hsla(0, 0%, 100%, 0.08);
+        color: var(--m3-on-surface);
+      }
+
+      .action-btn:active {
+        background: hsla(0, 0%, 100%, 0.12);
+        transform: scale(0.92);
+      }
+
+      /* --- M3 Primary FAB (Send) --- */
+      #sendBtn {
+        width: 56px;
+        height: 56px;
+        background: var(--m3-primary);
+        color: var(--m3-on-primary);
+        border: none;
+        border-radius: 16px; /* M3 FAB shape */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transition:
+          transform 0.2s cubic-bezier(0.2, 0, 0, 1),
+          box-shadow 0.2s,
+          background-color 0.2s;
+        flex-shrink: 0;
+      }
+
+      #sendBtn:hover {
+        background: #dbc6ff;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      #sendBtn:active {
+        transform: scale(0.94);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      #sendBtn svg {
+        width: 24px;
+        height: 24px;
+      }
+
+      /* --- Modals & Sheets --- */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(10px);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+      }
+
+      .modal-overlay.show {
+        display: flex;
+      }
+
+      .login-box {
+        background: var(--bg-dock);
+        padding: 24px;
+        border-radius: 20px;
+        width: 90%;
+        max-width: 340px;
+        border: 1px solid var(--border);
+      }
+
+      .login-input {
+        width: 100%;
+        padding: 14px;
+        background: #000;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        color: #fff;
+        margin: 16px 0;
+      }
+
+      .login-btn {
+        width: 100%;
+        padding: 14px;
+        background: var(--accent);
+        border: none;
+        border-radius: 12px;
+        color: #fff;
+        font-weight: bold;
+      }
+
+      .bottom-sheet {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--bg-dock);
+        backdrop-filter: blur(20px);
+        border-top-left-radius: 24px;
+        border-top-right-radius: 24px;
+        z-index: 2001;
+        transform: translateY(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        max-height: 70vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .bottom-sheet.show {
+        transform: translateY(0);
+      }
+
+      .sheet-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .sheet-list {
+        padding: 8px 0;
+        overflow-y: auto;
+      }
+
+      .option-item {
+        padding: 16px 20px;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .option-item:active {
+        background: hsla(0, 0%, 100%, 0.05);
+      }
+
+      /* Helpers */
+      .fab {
+        position: fixed;
+        bottom: 140px;
+        right: 16px;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: white;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+
+      .fab.show {
+        display: flex;
+      }
+
+      @keyframes ripple {
+        0% {
+          transform: translate(-50%, -50%) scale(0);
+          opacity: 0.8;
+        }
+
+        100% {
+          transform: translate(-50%, -50%) scale(2);
+          opacity: 0;
+        }
+      }
+
+      .click-ripple {
+        position: fixed;
+        width: 30px;
+        height: 30px;
+        background: rgba(255, 255, 255, 0.4);
+        border-radius: 50%;
+        pointer-events: none;
+        animation: ripple 0.5s ease-out forwards;
+        z-index: 9999;
+      }
+
+      /* --- M3 Top App Bar (Small) --- */
+      .header-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 9999;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 var(--space-md);
+        padding-top: env(safe-area-inset-top, 0);
+        background: var(--m3-surface);
+        border-bottom: 1px solid var(--m3-surface-variant);
+        transition: background-color 0.3s;
+      }
+
+      #connectivityBadge {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        padding: 4px 12px;
+        border-radius: var(--m3-shape-full);
+        background: var(--m3-surface-variant);
+        color: var(--m3-on-surface-variant);
+        font-size: var(--font-label-medium);
+        font-weight: 500;
+        letter-spacing: 0.1px;
+      }
+
+      .fab-top-right {
+        width: var(--touch-target-min);
+        height: var(--touch-target-min);
+        border-radius: 50%;
+        background: hsla(0, 0%, 100%, 0.08);
+        border: 1px solid var(--border);
+        color: var(--text-main);
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition:
+          transform 0.15s ease,
+          background 0.15s ease;
+      }
+
+      .fab-top-right:active {
+        transform: scale(0.92);
+        background: hsla(0, 0%, 100%, 0.15);
+      }
+
+      /* ===== RESPONSIVE BREAKPOINTS ===== */
+
+      /* Small phones (iPhone SE, 375px) */
+      @media (max-width: 380px) {
         :root {
-            --bg-deep: hsl(240, 10%, 8%);
-            --bg-dock: hsla(240, 10%, 15%, 0.8);
-            --accent: #3b82f6;
-            --border: hsla(0, 0%, 100%, 0.1);
-            --text-main: #e0e0e0;
-            --text-dim: #999;
+          --space-md: 8px;
+          --font-md: 14px;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        html {
-            overflow: hidden;
-            height: 100%;
-        }
-
-
-        body {
-            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: var(--bg-deep);
-            color: var(--text-main);
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* --- Chat Area --- */
-        .chat-container {
-            flex: 1;
-            overflow-y: auto;
-            position: relative;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 20px;
-        }
-
-
-        .chat-content {
-            padding: 16px 16px 0;
-            min-height: auto;
-        }
-
-        /* --- Unified Bottom Dock --- */
-        .bottom-dock {
-            background: var(--bg-dock);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            padding-bottom: env(safe-area-inset-bottom, 12px);
-            z-index: 1000;
-        }
-
-        /* Top Layer: Control Chips */
-        .dock-controls {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px;
-            overflow-x: auto;
-            scrollbar-width: none;
-            border-bottom: 1px solid hsla(0, 0%, 100%, 0.05);
-            width: 100%;
-        }
-
-        .dock-controls::-webkit-scrollbar {
-            display: none;
-        }
-
-        .control-chip {
-            background: hsla(0, 0%, 100%, 0.05);
-            border: 1px solid var(--border);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 500;
-            color: var(--text-dim);
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .control-chip:active {
-            transform: scale(0.96);
-            background: hsla(0, 0%, 100%, 0.1);
-        }
-
-        .control-chip .label {
-            font-size: 9px;
-            opacity: 0.5;
-            text-transform: uppercase;
-        }
-
-        .control-chip.active {
-            color: var(--text-main);
-            border-color: hsla(217, 91%, 60%, 0.3);
-            background: hsla(217, 91%, 60%, 0.1);
-        }
-
-        /* Bottom Layer: Input Row */
         .dock-input-row {
-            padding: 8px;
-            /* Tightening for iPhone SE */
-            display: flex;
-            align-items: stretch;
-            gap: 6px;
-            min-height: 54px;
-            width: 100%;
-            overflow: hidden;
-        }
-
-        .action-stack {
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            gap: 4px;
-            padding-bottom: 2px;
-            flex-shrink: 0;
-        }
-
-        .input-bubble {
-            flex: 1;
-            background: hsla(0, 0%, 0%, 0.3);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            display: flex;
-            align-items: center;
-            padding: 4px 12px 6px;
-            /* Slightly more balanced vertical padding */
-            transition: border-color 0.2s;
-            min-width: 0;
-            /* Allow flex shrinking */
-        }
-
-        .input-bubble:focus-within {
-            border-color: var(--accent);
-        }
-
-        #messageInput {
-            flex: 1;
-            background: transparent;
-            border: none;
-            outline: none;
-            color: #fff;
-            font-size: 16px;
-            line-height: 22px;
-            padding: 6px 0;
-            margin: 0;
-            resize: none;
-            max-height: 160px;
+          padding: 6px;
+          gap: 4px;
         }
 
         .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: hsla(0, 0%, 100%, 0.05);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            font-size: 16px;
-            color: var(--text-dim);
-            transition: all 0.2s;
-            flex-shrink: 0;
-        }
-
-        .action-btn:active {
-            transform: scale(0.9);
-            background: hsla(0, 0%, 100%, 0.1);
+          width: 40px;
+          height: 40px;
         }
 
         #sendBtn {
-            background: var(--accent);
-            color: #fff;
-            width: 42px;
-            /* Slightly narrower */
-            border-radius: 18px;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: all 0.2s;
-            padding: 0;
+          width: 42px;
+          border-radius: 18px;
         }
 
-        #sendBtn svg {
-            width: 18px;
-            height: 18px;
+        .control-chip {
+          padding: 3px 8px;
+          font-size: 10px;
+        }
+      }
+
+      /* Large phones / Small tablets (430px+) */
+      @media (min-width: 431px) and (max-width: 768px) {
+        .chat-content {
+          padding: var(--space-md) var(--space-lg);
+          max-width: var(--content-max-width);
+          margin: 0 auto;
         }
 
-        #sendBtn:active {
-            transform: scale(0.95);
-            opacity: 0.9;
+        .bottom-dock {
+          max-width: var(--dock-max-width);
+          margin: 0 auto;
+          border-radius: 24px 24px 0 0;
+        }
+      }
+
+      /* Tablets (iPad) */
+      @media (min-width: 769px) {
+        .chat-content {
+          padding: 24px 48px;
+          max-width: var(--content-max-width);
+          margin: 0 auto;
         }
 
-        /* --- Modals & Sheets --- */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
+        .bottom-dock {
+          max-width: var(--dock-max-width);
+          margin: 0 auto;
+          border-radius: 24px 24px 0 0;
+          border-left: 1px solid var(--border);
+          border-right: 1px solid var(--border);
         }
 
-        .modal-overlay.show {
-            display: flex;
+        #messageInput {
+          font-size: 18px;
         }
 
-        .login-box {
-            background: var(--bg-dock);
-            padding: 24px;
-            border-radius: 20px;
-            width: 90%;
-            max-width: 340px;
-            border: 1px solid var(--border);
+        .action-btn {
+          width: var(--touch-target-comfortable);
+          height: var(--touch-target-comfortable);
+        }
+      }
+
+      /* Landscape orientation */
+      @media (orientation: landscape) and (max-height: 500px) {
+        .chat-container {
+          padding-bottom: 8px;
         }
 
-        .login-input {
-            width: 100%;
-            padding: 14px;
-            background: #000;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            color: #fff;
-            margin: 16px 0;
+        .bottom-dock {
+          flex-direction: row;
+          align-items: center;
+          padding: 6px 12px;
+          gap: 12px;
         }
 
-        .login-btn {
-            width: 100%;
-            padding: 14px;
-            background: var(--accent);
-            border: none;
-            border-radius: 12px;
-            color: #fff;
-            font-weight: bold;
+        .dock-controls {
+          border-bottom: none;
+          border-right: 1px solid hsla(0, 0%, 100%, 0.05);
+          padding-right: 12px;
+          flex-shrink: 0;
         }
 
-        .bottom-sheet {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--bg-dock);
-            backdrop-filter: blur(20px);
-            border-top-left-radius: 24px;
-            border-top-right-radius: 24px;
-            z-index: 2001;
-            transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            max-height: 70vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .bottom-sheet.show {
-            transform: translateY(0);
-        }
-
-        .sheet-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .sheet-list {
-            padding: 8px 0;
-            overflow-y: auto;
-        }
-
-        .option-item {
-            padding: 16px 20px;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .option-item:active {
-            background: hsla(0, 0%, 100%, 0.05);
-        }
-
-        /* Helpers */
-        .fab {
-            position: fixed;
-            bottom: 140px;
-            right: 16px;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: var(--accent);
-            color: white;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
-
-        .fab.show {
-            display: flex;
-        }
-
-        @keyframes ripple {
-            0% {
-                transform: translate(-50%, -50%) scale(0);
-                opacity: 0.8;
-            }
-
-            100% {
-                transform: translate(-50%, -50%) scale(2);
-                opacity: 0;
-            }
-        }
-
-        .click-ripple {
-            position: fixed;
-            width: 30px;
-            height: 30px;
-            background: rgba(255, 255, 255, 0.4);
-            border-radius: 50%;
-            pointer-events: none;
-            animation: ripple 0.5s ease-out forwards;
-            z-index: 9999;
+        .dock-input-row {
+          flex: 1;
+          min-height: var(--touch-target-min);
+          padding: 4px 0;
         }
 
         #connectivityBadge {
-            position: fixed;
-            top: 16px;
-            left: 16px;
-            z-index: 9999;
-            padding: 8px 12px;
-            border-radius: 20px;
-            background: hsla(0, 0%, 0%, 0.5);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 11px;
-            font-weight: bold;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          top: 8px;
+          left: 8px;
+          padding: 6px 10px;
         }
 
         .fab-top-right {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            z-index: 9999;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: hsla(0, 0%, 100%, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          top: 8px;
+          right: 8px;
+          width: 36px;
+          height: 36px;
+        }
+      }
+
+      /* GPU-accelerated animations */
+      .bottom-sheet {
+        will-change: transform;
+      }
+
+      .modal-overlay {
+        will-change: opacity;
+      }
+
+      /* Respect user motion preferences */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
         }
 
-        .fab-top-right:active {
-            transform: scale(0.9);
+        .bottom-sheet {
+          transition: none;
         }
+      }
     </style>
-</head>
+  </head>
 
-<body>
+  <body>
     <div class="chat-container" id="chatContainer">
-        <div class="chat-content" id="chatContent">
-            <div class="loading">
-                <div class="spinner"></div>
-                <span>Initializing...</span>
-            </div>
+      <div class="chat-content" id="chatContent">
+        <div class="loading">
+          <div class="spinner"></div>
+          <span>Initializing...</span>
         </div>
+      </div>
     </div>
 
-    <!-- Top Navigation -->
-    <div id="connectivityBadge">
-        <div id="statusDot" style="width:8px; height:8px; border-radius:50%; background:#aaa;"></div>
+    <!-- Persistent Header Bar -->
+    <header class="header-bar">
+      <div id="connectivityBadge">
+        <div
+          id="statusDot"
+          style="width: 8px; height: 8px; border-radius: 50%; background: #aaa"
+        ></div>
         <span id="statusText">CONNECTING</span>
-    </div>
-    <button class="fab-top-right" id="instancesBtn">🖥️</button>
+      </div>
+      <button class="fab-top-right" id="instancesBtn" title="Select Instance">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M21 16.5C21 16.8978 20.842 17.2794 20.5607 17.5607C20.2794 17.842 19.8978 18 19.5 18H18V19.5C18 19.8978 17.842 20.2794 17.5607 20.5607C17.2794 20.842 16.8978 21 16.5 21H7.5C7.10218 21 6.72064 20.842 6.43934 20.5607C6.15804 20.2794 6 19.8978 6 19.5V18H4.5C4.10218 18 3.72064 17.842 3.43934 17.5607C3.15804 17.2794 3 16.8978 3 16.5V6C3 5.60218 3.15804 5.22064 3.43934 4.93934C3.72064 4.65804 4.10218 4.5 4.5 4.5H19.5C19.8978 4.5 20.2794 4.65804 20.5607 4.93934C20.842 5.22064 21 5.60218 21 6V16.5ZM19.5 6H4.5V16.5H19.5V6Z"
+          />
+        </svg>
+      </button>
+    </header>
 
     <!-- Unified Bottom Dock -->
     <div class="bottom-dock">
-        <!-- Floating Scroll FAB -->
-        <button class="fab" id="scrollToBottom">↓</button>
+      <!-- Floating Scroll FAB -->
+      <button class="fab" id="scrollToBottom">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M12 15.6538L6.34615 10L7.40385 8.94231L12 13.5385L16.5962 8.94231L17.6538 10L12 15.6538Z"
+          />
+        </svg>
+      </button>
 
-        <!-- Top Layer: Scrapers (Mode, Model) -->
-        <div class="dock-controls" id="nativeStatusBar">
-            <div id="modeChip" class="control-chip">
-                <span class="label">MODE</span>
-                <span id="modeVal">...</span>
-            </div>
-            <div id="modelChip" class="control-chip">
-                <span class="label">MODEL</span>
-                <span id="modelVal">...</span>
-            </div>
+      <!-- Top Layer: Scrapers (Mode, Model) -->
+      <div class="dock-controls" id="nativeStatusBar">
+        <div id="modeChip" class="control-chip">
+          <span class="label">MODE</span>
+          <span id="modeVal">...</span>
         </div>
+        <div id="modelChip" class="control-chip">
+          <span class="label">MODEL</span>
+          <span id="modelVal">...</span>
+        </div>
+      </div>
 
-        <!-- Bottom Layer: Messaging -->
-        <div class="dock-input-row">
-            <div class="action-stack">
-                <button id="uploadBtn" class="action-btn" title="Upload File">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path
-                            d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.51a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                    </svg>
-                </button>
-                <button id="micBtn" class="action-btn" title="Speech to Text">
-                    <svg id="micIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                        <line x1="12" y1="19" x2="12" y2="22" />
-                    </svg>
-                </button>
-            </div>
-            <div class="input-bubble">
-                <input type="file" id="fileInput" style="display:none">
-                <textarea id="messageInput" placeholder="Message Antigravity..." rows="1"></textarea>
-            </div>
-            <button id="sendBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                </svg>
-            </button>
+      <!-- Bottom Layer: Messaging -->
+      <div class="dock-input-row">
+        <div class="action-stack">
+          <button id="uploadBtn" class="action-btn" title="Upload File">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+            </svg>
+          </button>
+
+          <button id="micBtn" class="action-btn" title="Voice Input">
+            <svg
+              id="micIcon"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path
+                d="M12 14C10.9 14 9.95833 13.6083 9.175 12.825C8.39167 12.0417 8 11.1 8 10V4C8 2.9 8.39167 1.95833 9.175 1.175C9.95833 0.391667 10.9 0 12 0C13.1 0 14.0417 0.391667 14.825 1.175C15.6083 1.95833 16 2.9 16 4V10C16 11.1 15.6083 12.0417 14.825 12.825C14.0417 13.6083 13.1 14 12 14ZM11 23V19.925C8.16667 19.475 5.85417 18.0667 4.0625 15.7C2.27083 13.3333 1.375 10.6667 1.375 7.7H3.375C3.375 10.0833 4.21667 12.1125 5.9 13.7875C7.58333 15.4625 9.61667 16.3 12 16.3C14.3833 16.3 16.4167 15.4625 18.1 13.7875C19.7833 12.1125 20.625 10.0833 20.625 7.7H22.625C22.625 10.6667 21.7292 13.3333 19.9375 15.7C18.1458 18.0667 15.8333 19.475 13 19.925V23H11Z"
+              />
+            </svg>
+          </button>
         </div>
+        <div class="input-bubble">
+          <input type="file" id="fileInput" style="display: none" />
+          <textarea
+            id="messageInput"
+            placeholder="Message Antigravity..."
+            rows="1"
+          ></textarea>
+        </div>
+        <button id="sendBtn" title="Send">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 20L12 6.825L6.4 12.425L5 11L12 4L19 11L17.6 12.425L12 6.825L12 20Z"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- Modals & Sheets -->
     <div class="modal-overlay" id="loginModal">
-        <div class="login-box">
-            <h2 class="login-title">🔐 Identity</h2>
-            <input type="password" class="login-input" id="tokenInput" placeholder="Access Token" autocomplete="off">
-            <button class="login-btn" id="loginBtn">Authorize</button>
-        </div>
+      <div class="login-box">
+        <h2 class="login-title">Identity</h2>
+        <input
+          type="password"
+          class="login-input"
+          id="tokenInput"
+          placeholder="Access Token"
+          autocomplete="off"
+        />
+        <button class="login-btn" id="loginBtn">Authorize</button>
+      </div>
     </div>
 
     <div class="modal-overlay" id="instancesModal">
-        <div class="login-box">
-            <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
-                <h3 style="margin:0;">🖥️ Active Instances</h3>
-                <span id="closeInstancesBtn" style="cursor:pointer; opacity:0.5;">✕</span>
-            </div>
-            <div id="instancesList"
-                style="display:flex; flex-direction:column; gap:10px; max-height:40vh; overflow-y:auto;">
-                <!-- Injected -->
-            </div>
+      <div class="login-box">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+          "
+        >
+          <h3 style="margin: 0">Active Instances</h3>
+          <span id="closeInstancesBtn" style="cursor: pointer; opacity: 0.5"
+            >✕</span
+          >
         </div>
+        <div
+          id="instancesList"
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 40vh;
+            overflow-y: auto;
+          "
+        >
+          <!-- Injected -->
+        </div>
+      </div>
     </div>
 
-    <div id="sheetOverlay" class="modal-overlay" style="background:rgba(0,0,0,0.5)"></div>
+    <div
+      id="sheetOverlay"
+      class="modal-overlay"
+      style="background: rgba(0, 0, 0, 0.5)"
+    ></div>
     <div id="optionsSheet" class="bottom-sheet">
-        <div class="sheet-header">
-            <h3 id="sheetTitle" class="sheet-title">Options</h3>
-            <button id="sheetClose" class="sheet-close"
-                style="background:transparent; border:none; color:#fff; font-size:24px;">&times;</button>
-        </div>
-        <div id="sheetList" class="sheet-list">
-            <!-- Options injected -->
-        </div>
+      <div class="sheet-header">
+        <h3 id="sheetTitle" class="sheet-title">Options</h3>
+        <button
+          id="sheetClose"
+          class="sheet-close"
+          style="
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+          "
+        >
+          &times;
+        </button>
+      </div>
+      <div id="sheetList" class="sheet-list">
+        <!-- Options injected -->
+      </div>
     </div>
 
     <!-- Debug Log (Hidden) -->
-    <div id="debugLog"
-        style="position:fixed; top:60px; left:16px; right:16px; max-height:200px; background:rgba(0,0,0,0.9); border-radius:12px; border:1px solid #444; color:#0f0; font-family:monospace; font-size:10px; padding:8px; overflow-y:auto; z-index:9000; display:none; pointer-events:none;">
-    </div>
+    <div
+      id="debugLog"
+      style="
+        position: fixed;
+        top: 60px;
+        left: 16px;
+        right: 16px;
+        max-height: 200px;
+        background: rgba(0, 0, 0, 0.9);
+        border-radius: 12px;
+        border: 1px solid #444;
+        color: #0f0;
+        font-family: monospace;
+        font-size: 10px;
+        padding: 8px;
+        overflow-y: auto;
+        z-index: 9000;
+        display: none;
+        pointer-events: none;
+      "
+    ></div>
 
     <script>
-        const chatContainer = document.getElementById('chatContainer');
-        const chatContent = document.getElementById('chatContent');
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const fileInput = document.getElementById('fileInput');
-        const micBtn = document.getElementById('micBtn');
-        const scrollToBottomBtn = document.getElementById('scrollToBottom');
-        let uploadTargetSelector = localStorage.getItem('ag_upload_target') || '';
+      const chatContainer = document.getElementById("chatContainer");
+      const chatContent = document.getElementById("chatContent");
+      const messageInput = document.getElementById("messageInput");
+      const sendBtn = document.getElementById("sendBtn");
+      const uploadBtn = document.getElementById("uploadBtn");
+      const fileInput = document.getElementById("fileInput");
+      const micBtn = document.getElementById("micBtn");
+      const scrollToBottomBtn = document.getElementById("scrollToBottom");
+      let uploadTargetSelector = localStorage.getItem("ag_upload_target") || "";
 
-        // Auth elements
-        const loginModal = document.getElementById('loginModal');
-        const tokenInput = document.getElementById('tokenInput');
-        const loginBtn = document.getElementById('loginBtn');
+      // Auth elements
+      const loginModal = document.getElementById("loginModal");
+      const tokenInput = document.getElementById("tokenInput");
+      const loginBtn = document.getElementById("loginBtn");
 
-        let userIsScrolling = false;
-        let ws = null;
-        let pendingMessage = null; // Track message waiting for visual confirmation
-        let initialScrollDone = false;
-        let authToken = localStorage.getItem('ag_auth_token') || '';
+      let userIsScrolling = false;
+      let ws = null;
+      let pendingMessage = null; // Track message waiting for visual confirmation
+      let initialScrollDone = false;
+      let authToken = localStorage.getItem("ag_auth_token") || "";
 
-        // Check URL for token immediately (QR code login)
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlToken = urlParams.get('token');
+      // Check URL for token immediately (QR code login)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlToken = urlParams.get("token");
 
-        if (urlToken) {
-            authToken = urlToken;
-            localStorage.setItem('ag_auth_token', urlToken);
-            // Clean URL
-            window.history.replaceState({}, document.title, window.location.pathname);
+      if (urlToken) {
+        authToken = urlToken;
+        localStorage.setItem("ag_auth_token", urlToken);
+        // Clean URL
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname,
+        );
+      }
+
+      // Show login if needed
+      function checkAuth() {
+        if (!authToken) {
+          showLogin();
+          return false;
+        }
+        return true;
+      }
+
+      function showLogin() {
+        loginModal.classList.add("show");
+        tokenInput.focus();
+      }
+
+      function handleLogin() {
+        const token = tokenInput.value.trim();
+        if (token) {
+          authToken = token;
+          localStorage.setItem("ag_auth_token", token);
+          loginModal.classList.remove("show");
+          // Reconnect
+          if (ws) ws.close();
+          connectWebSocket();
+        }
+      }
+
+      loginBtn.addEventListener("click", handleLogin);
+      tokenInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") handleLogin();
+      });
+
+      // Render snapshot
+      function renderSnapshot(data) {
+        const scrollPos = chatContainer.scrollTop;
+        const isNearBottom =
+          chatContainer.scrollHeight -
+            chatContainer.scrollTop -
+            chatContainer.clientHeight <
+          100;
+
+        // Check if pending message appeared in snapshot (visual confirmation)
+        if (
+          pendingMessage &&
+          data.html &&
+          data.html.includes(pendingMessage.slice(0, 50))
+        ) {
+          messageInput.value = "";
+          autoResizeInput();
+          pendingMessage = null;
         }
 
-        // Show login if needed
-        function checkAuth() {
-            if (!authToken) {
-                showLogin();
-                return false;
-            }
-            return true;
+        // Apply Antigravity's theme class to our html element
+        if (data.themeClass) {
+          document.documentElement.className = data.themeClass;
+        }
+        if (data.themeAttr) {
+          document.documentElement.setAttribute("data-theme", data.themeAttr);
         }
 
-        function showLogin() {
-            loginModal.classList.add('show');
-            tokenInput.focus();
-        }
+        // Apply body background and color from Antigravity
+        const bodyBg = data.bodyBg || "#1a1a1a";
+        const bodyColor = data.bodyColor || "#e0e0e0";
+        document.body.style.backgroundColor = bodyBg;
+        document.body.style.color = bodyColor;
 
-        function handleLogin() {
-            const token = tokenInput.value.trim();
-            if (token) {
-                authToken = token;
-                localStorage.setItem('ag_auth_token', token);
-                loginModal.classList.remove('show');
-                // Reconnect
-                if (ws) ws.close();
-                connectWebSocket();
-            }
-        }
-
-        loginBtn.addEventListener('click', handleLogin);
-        tokenInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') handleLogin();
-        });
-
-        // Render snapshot
-        function renderSnapshot(data) {
-            const scrollPos = chatContainer.scrollTop;
-            const isNearBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 100;
-
-            // Check if pending message appeared in snapshot (visual confirmation)
-            if (pendingMessage && data.html && data.html.includes(pendingMessage.slice(0, 50))) {
-                messageInput.value = '';
-                autoResizeInput();
-                pendingMessage = null;
-            }
-
-            // Apply Antigravity's theme class to our html element
-            if (data.themeClass) {
-                document.documentElement.className = data.themeClass;
-            }
-            if (data.themeAttr) {
-                document.documentElement.setAttribute('data-theme', data.themeAttr);
-            }
-
-            // Apply body background and color from Antigravity
-            const bodyBg = data.bodyBg || '#1a1a1a';
-            const bodyColor = data.bodyColor || '#e0e0e0';
-            document.body.style.backgroundColor = bodyBg;
-            document.body.style.color = bodyColor;
-
-            chatContent.innerHTML = `
+        chatContent.innerHTML = `
                 <style>
                     /* Apply color scheme from Antigravity */
                     :root, html, body, #chatContent, #chatContent * {
-                        color-scheme: ${data.colorScheme || 'dark'} !important;
+                        color-scheme: ${data.colorScheme || "dark"} !important;
                     }
                     
                     /* Inject all CSS from Antigravity */
@@ -622,7 +953,7 @@
                     
                     /* Use captured text color from Antigravity (works for any theme) */
                     #cascade, #cascade * {
-                        color: ${data.bodyColor || 'inherit'};
+                        color: ${data.bodyColor || "inherit"};
                     }
                     
                     /* Code blocks - keep dark background */
@@ -702,475 +1033,534 @@
                 ${data.html}
             `;
 
-            // NEW: Cleanup legacy UI elements by text content (highly robust post-processing)
-            chatContent.querySelectorAll('button, [role="button"], span, div').forEach(el => {
-                const text = (el.innerText || '').trim();
-                const blackList = [
-                    'Review Changes', 'Submit', 'Proceed', 'Relocate', 'Always run',
-                    'Thinking...', 'Thought for', 'Stop', 'Accept', 'Reject',
-                    'Ask anything', 'Planning', 'Model'
-                ];
-                if (blackList.some(b => text.startsWith(b))) {
-                    // Find the nearest logical container to hide
-                    const target = el.closest('button, [role="button"], div.outline-solid, div.isolate, div.flex-row') || el;
-                    if (target) {
-                        target.style.setProperty('display', 'none', 'important');
-                    }
-                }
+        // NEW: Cleanup legacy UI elements by text content (highly robust post-processing)
+        chatContent
+          .querySelectorAll('button, [role="button"], span, div')
+          .forEach((el) => {
+            const text = (el.innerText || "").trim();
+            const blackList = [
+              "Review Changes",
+              "Submit",
+              "Proceed",
+              "Relocate",
+              "Always run",
+              "Thinking...",
+              "Thought for",
+              "Stop",
+              "Accept",
+              "Reject",
+              "Ask anything",
+              "Planning",
+              "Model",
+            ];
+            if (blackList.some((b) => text.startsWith(b))) {
+              // Find the nearest logical container to hide
+              const target =
+                el.closest(
+                  'button, [role="button"], div.outline-solid, div.isolate, div.flex-row',
+                ) || el;
+              if (target) {
+                target.style.setProperty("display", "none", "important");
+              }
+            }
+          });
+
+        if (!initialScrollDone) {
+          // Force a double-RAF scroll on first render to land at the newest content
+          initialScrollDone = true;
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              chatContainer.scrollTop = chatContainer.scrollHeight;
             });
-
-            if (!initialScrollDone) {
-                // Force a double-RAF scroll on first render to land at the newest content
-                initialScrollDone = true;
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                    });
-                });
-            } else if (isNearBottom || scrollPos === 0) {
-                requestAnimationFrame(() => {
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                });
-            } else {
-                chatContainer.scrollTop = scrollPos;
-            }
-        }
-
-        const connectivityBadge = document.getElementById('connectivityBadge');
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
-        const debugLog = document.getElementById('debugLog');
-
-        function logToScreen(msg, color = '#aaa') {
-            console.log(`[LOG] ${msg}`);
-            const line = document.createElement('div');
-            line.style.color = color;
-            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-            debugLog.insertBefore(line, debugLog.firstChild);
-        }
-
-        connectivityBadge.addEventListener('click', () => {
-            debugLog.style.display = debugLog.style.display === 'none' ? 'block' : 'none';
-        });
-
-        function updateConnectionUI(mode) {
-            statusText.textContent = mode.toUpperCase();
-            if (mode === 'ws') {
-                statusDot.style.background = '#4ade80'; // Green
-                statusText.style.color = '#4ade80';
-            } else if (mode === 'http') {
-                statusDot.style.background = '#fbbf24'; // Amber
-                statusText.style.color = '#fbbf24';
-            } else if (mode === 'offline') {
-                statusDot.style.background = '#f87171'; // Red
-                statusText.style.color = '#f87171';
-            } else {
-                statusDot.style.background = '#aaa';
-                statusText.style.color = '#aaa';
-            }
-        }
-
-        let pollingInterval = null;
-        function startHttpPolling() {
-            if (pollingInterval) return;
-            logToScreen('Switching to HTTP Polling Mode', '#fbbf24');
-            updateConnectionUI('http');
-
-            const poll = async () => {
-                try {
-                    const res = await fetch('/snapshot', {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
-                    });
-                    if (res.status === 401) {
-                        authToken = '';
-                        localStorage.removeItem('ag_auth_token');
-                        showLogin();
-                        clearInterval(pollingInterval);
-                        pollingInterval = null;
-                        return;
-                    }
-                    if (res.ok) {
-                        const data = await res.json();
-                        renderSnapshot(data);
-                        updateControls(data.controlsHtml || data.html);
-                    }
-                } catch (e) {
-                    logToScreen(`HTTP Poll Fail: ${e.message}`, '#f87171');
-                }
-            };
-
-            poll();
-            pollingInterval = setInterval(poll, 3000);
-        }
-
-        // WebSocket connection
-        function connectWebSocket() {
-            if (pollingInterval) return; // Already in polling mode
-
-            // Dynamic protocol based on page load
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}?token=${encodeURIComponent(authToken)}`;
-
-            logToScreen(`Connecting via ${protocol}...`);
-            updateConnectionUI('connecting');
-
-            ws = new WebSocket(wsUrl);
-
-            // Watchdog: If no snapshot or WS open in 5s, fall back to HTTP
-            const watchdog = setTimeout(() => {
-                if (!ws || ws.readyState !== WebSocket.OPEN) {
-                    logToScreen('WS Connection Timed Out. Falling back to HTTP.', '#fbbf24');
-                    if (ws) ws.close();
-                    startHttpPolling();
-                }
-            }, 5000);
-
-            ws.onopen = async () => {
-                clearTimeout(watchdog);
-                logToScreen('WebSocket Connected', '#4ade80');
-                updateConnectionUI('ws');
-
-                const loader = document.querySelector('.loading span');
-                if (loader) loader.textContent = 'Authenticating...';
-
-                // Auto-connect / Wake-up Logic
-                try {
-                    const res = await fetch('/instances', { headers: { 'Authorization': `Bearer ${authToken}` } });
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (!data.activePort && data.instances.length > 0) {
-                            if (loader) loader.textContent = 'Auto-connecting...';
-                            await switchInstance(data.instances[0].port);
-                            return;
-                        }
-                    }
-                } catch (e) {
-                    logToScreen(`Auto-connect check failed: ${e.message}`);
-                }
-
-                ws.send(JSON.stringify({ type: 'request_snapshot' }));
-            };
-
-            ws.onmessage = (event) => {
-                try {
-                    const msg = JSON.parse(event.data);
-                    if (msg.type === 'snapshot' && msg.data) {
-                        if (!userIsScrolling) {
-                            renderSnapshot(msg.data);
-                            updateControls(msg.data.controlsHtml || msg.data.html);
-                        }
-                    }
-                } catch (e) {
-                    logToScreen(`Message Parse Error: ${e.message}`, '#f87171');
-                }
-            };
-
-            ws.onclose = (event) => {
-                clearTimeout(watchdog);
-                const reason = event.code === 1008 ? 'Auth Failed' : (event.code === 1006 ? 'Abnormal Closure' : `Closed (${event.code})`);
-                logToScreen(`WS Disconnected: ${reason}`);
-
-                if (event.code === 1008) {
-                    authToken = '';
-                    localStorage.removeItem('ag_auth_token');
-                    showLogin();
-                } else if (event.code === 1006) {
-                    // Critical Abnormal Closure (often SSL/Network relates) - fallback immediately
-                    startHttpPolling();
-                } else {
-                    updateConnectionUI('offline');
-                    setTimeout(connectWebSocket, 2000);
-                }
-            };
-
-            ws.onerror = (e) => {
-                logToScreen('WS Network Error', '#f87171');
-                ws.close();
-            };
-        }
-
-        // Send message
-        async function sendMessage() {
-            if (!checkAuth()) return;
-
-            const message = messageInput.value.trim();
-            if (!message) return;
-
-            sendBtn.disabled = true;
-            sendBtn.textContent = '...';
-
-            try {
-                const res = await fetch('/send', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify({ message })
-                });
-
-                if (res.status === 401) {
-                    authToken = '';
-                    localStorage.removeItem('ag_auth_token');
-                    showLogin();
-                    throw new Error('Unauthorized');
-                }
-
-            } catch (e) {
-                console.error(e);
-            } finally {
-                // Always clear textarea after send attempt
-                messageInput.value = '';
-                autoResizeInput(); // Reset to min-height
-                sendBtn.disabled = false;
-            }
-        }
-
-        // Scroll handling
-        let scrollTimeout;
-        chatContainer.addEventListener('scroll', () => {
-            userIsScrolling = true;
-            clearTimeout(scrollTimeout);
-
-            const isNearBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 100;
-            scrollToBottomBtn.classList.toggle('show', !isNearBottom);
-
-            scrollTimeout = setTimeout(() => {
-                userIsScrolling = false;
-            }, 500);
-        });
-
-        scrollToBottomBtn.addEventListener('click', () => {
-            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
-        });
-
-        // Input handlers
-        sendBtn.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        // File Upload Logic
-        uploadBtn.addEventListener('click', () => {
-            fileInput.click();
-        });
-
-        fileInput.addEventListener('change', async () => {
-            const file = fileInput.files[0];
-            if (!file) return;
-
-            // Preflight size check (50MB hard limit to match server)
-            const MAX_SIZE_MB = 50;
-            if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-                alert(`File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max limit is ${MAX_SIZE_MB}MB.`);
-                fileInput.value = '';
-                return;
-            }
-            logToScreen(`Using upload target selector: ${uploadTargetSelector || 'auto-detect'}`, '#999');
-
-            // Visual feedback
-            const originalIcon = uploadBtn.innerHTML;
-            uploadBtn.innerHTML = '⏳';
-            uploadBtn.disabled = true;
-            logToScreen(`Uploading: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)...`, '#3b82f6');
-
-            try {
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    const base64Content = e.target.result.split(',')[1]; // Remove data URL prefix
-
-                    const response = await fetch('/upload', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${authToken}`
-                        },
-                        body: JSON.stringify({
-                            name: file.name,
-                            content: base64Content,
-                            targetSelector: uploadTargetSelector || undefined
-                        })
-                    });
-
-                    if (response.ok) {
-                        const result = await response.json();
-                        logToScreen(`Upload success: ${file.name}`, '#4ade80');
-                        if (result.injected) {
-                            alert(`Uploaded and injected: ${result.path}`);
-                        } else {
-                            const reason = result.reason || 'could_not_locate_file_input';
-                            const msg = `File saved but not injected (${reason}). If you know the file input selector, enter it to retry next time.`;
-                            alert(msg);
-                            const userSelector = prompt('Optional CSS selector for the file input (e.g., input[type="file"])', uploadTargetSelector);
-                            if (userSelector) {
-                                uploadTargetSelector = userSelector.trim();
-                                localStorage.setItem('ag_upload_target', uploadTargetSelector);
-                            }
-                        }
-                    } else {
-                        const error = await response.json().catch(() => ({ error: response.statusText }));
-                        const msg = response.status === 413 ? 'File too large for server.' : error.error;
-                        logToScreen(`Upload failed: ${msg}`, '#f87171');
-                        alert(`Upload failed: ${msg}`);
-                    }
-                };
-                reader.onerror = () => {
-                    alert('Error reading file');
-                };
-                reader.readAsDataURL(file);
-            } catch (err) {
-                console.error('Upload error:', err);
-                alert('Upload error');
-            } finally {
-                uploadBtn.innerHTML = originalIcon;
-                uploadBtn.disabled = false;
-                fileInput.value = ''; // Reset for next upload
-            }
-        });
-
-        // Voice Input Logic
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) {
-            const recognition = new SpeechRecognition();
-            recognition.continuous = true; // Continuous listening
-            recognition.interimResults = true; // Real-time feedback
-            recognition.lang = 'en-US';
-
-            let isListening = false;
-            let baseText = '';
-
-            micBtn.addEventListener('click', () => {
-                if (isListening) {
-                    recognition.stop();
-                    return;
-                }
-
-                try {
-                    // Capture current text
-                    baseText = messageInput.value;
-                    if (baseText && !baseText.endsWith(' ') && !baseText.endsWith('\n')) baseText += ' ';
-
-                    recognition.start();
-                    isListening = true;
-                    micBtn.innerHTML = '🔴';
-                    micBtn.classList.add('listening');
-                    micBtn.style.color = '#ff4444';
-                    micBtn.style.background = '#3a3a3a';
-                    micBtn.style.boxShadow = '0 0 0 3px rgba(255, 68, 68, 0.3)';
-                } catch (e) {
-                    console.error(e);
-                }
-            });
-
-            recognition.onresult = (event) => {
-                // event.results contains the accumulator for this session
-                let sessionTranscript = '';
-                for (let i = 0; i < event.results.length; ++i) {
-                    sessionTranscript += event.results[i][0].transcript;
-                }
-
-                // Smooth real-time update
-                messageInput.value = baseText + sessionTranscript;
-
-                // Auto-resize logic so the textarea grows as we speak
-                messageInput.style.height = 'auto'; // Reset to calculate scrollHeight
-                messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
-                messageInput.scrollTop = messageInput.scrollHeight;
-                return;
-
-                // Append any new final results
-                if (currentFinal) {
-                    const current = messageInput.value;
-                    messageInput.value = (current + (current && !current.endsWith(' ') ? ' ' : '') + currentFinal).trim();
-                }
-
-                // Note: We don't display interim directly in value to avoid cursor jumping, 
-                // but enabling it makes the engine faster. 
-                // A more advanced UI would overlay interim text, but standard append is safer.
-
-                messageInput.dispatchEvent(new Event('input'));
-                messageInput.scrollTop = messageInput.scrollHeight;
-            };
-
-            recognition.onend = () => {
-                isListening = false;
-                micBtn.innerHTML = '🎙️';
-                micBtn.classList.remove('listening');
-                micBtn.style.color = '#fff';
-                micBtn.style.background = '#3a3a3a';
-                micBtn.style.boxShadow = 'none';
-            };
-
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error', event.error);
-                micBtn.innerHTML = '⚠️';
-                setTimeout(() => {
-                    if (!micBtn.classList.contains('listening')) micBtn.innerHTML = '🎙️';
-                }, 2000);
-            };
+          });
+        } else if (isNearBottom || scrollPos === 0) {
+          requestAnimationFrame(() => {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+          });
         } else {
-            micBtn.style.display = 'none';
-            console.log('Web Speech API not supported');
+          chatContainer.scrollTop = scrollPos;
         }
+      }
 
-        // Instance Handling
-        const instancesBtn = document.getElementById('instancesBtn');
-        const instancesModal = document.getElementById('instancesModal');
-        const instancesList = document.getElementById('instancesList');
-        const closeInstancesBtn = document.getElementById('closeInstancesBtn');
-        let activeTargetId = null;
+      const connectivityBadge = document.getElementById("connectivityBadge");
+      const statusDot = document.getElementById("statusDot");
+      const statusText = document.getElementById("statusText");
+      const debugLog = document.getElementById("debugLog");
 
-        instancesBtn.addEventListener('click', () => {
-            instancesModal.classList.add('show');
-            fetchInstances();
+      function logToScreen(msg, color = "#aaa") {
+        console.log(`[LOG] ${msg}`);
+        const line = document.createElement("div");
+        line.style.color = color;
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        debugLog.insertBefore(line, debugLog.firstChild);
+      }
+
+      connectivityBadge.addEventListener("click", () => {
+        debugLog.style.display =
+          debugLog.style.display === "none" ? "block" : "none";
+      });
+
+      function updateConnectionUI(mode) {
+        statusText.textContent = mode.toUpperCase();
+        if (mode === "ws") {
+          statusDot.style.background = "#4ade80"; // Green
+          statusText.style.color = "#4ade80";
+        } else if (mode === "http") {
+          statusDot.style.background = "#fbbf24"; // Amber
+          statusText.style.color = "#fbbf24";
+        } else if (mode === "offline") {
+          statusDot.style.background = "#f87171"; // Red
+          statusText.style.color = "#f87171";
+        } else {
+          statusDot.style.background = "#aaa";
+          statusText.style.color = "#aaa";
+        }
+      }
+
+      let pollingInterval = null;
+      function startHttpPolling() {
+        if (pollingInterval) return;
+        logToScreen("Switching to HTTP Polling Mode", "#fbbf24");
+        updateConnectionUI("http");
+
+        const poll = async () => {
+          try {
+            const res = await fetch("/snapshot", {
+              headers: { Authorization: `Bearer ${authToken}` },
+            });
+            if (res.status === 401) {
+              authToken = "";
+              localStorage.removeItem("ag_auth_token");
+              showLogin();
+              clearInterval(pollingInterval);
+              pollingInterval = null;
+              return;
+            }
+            if (res.ok) {
+              const data = await res.json();
+              renderSnapshot(data);
+              updateControls(data.controlsHtml || data.html);
+            }
+          } catch (e) {
+            logToScreen(`HTTP Poll Fail: ${e.message}`, "#f87171");
+          }
+        };
+
+        poll();
+        pollingInterval = setInterval(poll, 3000);
+      }
+
+      // WebSocket connection
+      function connectWebSocket() {
+        if (pollingInterval) return; // Already in polling mode
+
+        // Dynamic protocol based on page load
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.host}?token=${encodeURIComponent(authToken)}`;
+
+        logToScreen(`Connecting via ${protocol}...`);
+        updateConnectionUI("connecting");
+
+        ws = new WebSocket(wsUrl);
+
+        // Watchdog: If no snapshot or WS open in 5s, fall back to HTTP
+        const watchdog = setTimeout(() => {
+          if (!ws || ws.readyState !== WebSocket.OPEN) {
+            logToScreen(
+              "WS Connection Timed Out. Falling back to HTTP.",
+              "#fbbf24",
+            );
+            if (ws) ws.close();
+            startHttpPolling();
+          }
+        }, 5000);
+
+        ws.onopen = async () => {
+          clearTimeout(watchdog);
+          logToScreen("WebSocket Connected", "#4ade80");
+          updateConnectionUI("ws");
+
+          const loader = document.querySelector(".loading span");
+          if (loader) loader.textContent = "Authenticating...";
+
+          // Auto-connect / Wake-up Logic
+          try {
+            const res = await fetch("/instances", {
+              headers: { Authorization: `Bearer ${authToken}` },
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (!data.activePort && data.instances.length > 0) {
+                if (loader) loader.textContent = "Auto-connecting...";
+                await switchInstance(data.instances[0].port);
+                return;
+              }
+            }
+          } catch (e) {
+            logToScreen(`Auto-connect check failed: ${e.message}`);
+          }
+
+          ws.send(JSON.stringify({ type: "request_snapshot" }));
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === "snapshot" && msg.data) {
+              if (!userIsScrolling) {
+                renderSnapshot(msg.data);
+                updateControls(msg.data.controlsHtml || msg.data.html);
+              }
+            }
+          } catch (e) {
+            logToScreen(`Message Parse Error: ${e.message}`, "#f87171");
+          }
+        };
+
+        ws.onclose = (event) => {
+          clearTimeout(watchdog);
+          const reason =
+            event.code === 1008
+              ? "Auth Failed"
+              : event.code === 1006
+                ? "Abnormal Closure"
+                : `Closed (${event.code})`;
+          logToScreen(`WS Disconnected: ${reason}`);
+
+          if (event.code === 1008) {
+            authToken = "";
+            localStorage.removeItem("ag_auth_token");
+            showLogin();
+          } else if (event.code === 1006) {
+            // Critical Abnormal Closure (often SSL/Network relates) - fallback immediately
+            startHttpPolling();
+          } else {
+            updateConnectionUI("offline");
+            setTimeout(connectWebSocket, 2000);
+          }
+        };
+
+        ws.onerror = (e) => {
+          logToScreen("WS Network Error", "#f87171");
+          ws.close();
+        };
+      }
+
+      // Send message
+      async function sendMessage() {
+        if (!checkAuth()) return;
+
+        const message = messageInput.value.trim();
+        if (!message) return;
+
+        sendBtn.disabled = true;
+        sendBtn.textContent = "...";
+
+        try {
+          const res = await fetch("/send", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({ message }),
+          });
+
+          if (res.status === 401) {
+            authToken = "";
+            localStorage.removeItem("ag_auth_token");
+            showLogin();
+            throw new Error("Unauthorized");
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          // Always clear textarea after send attempt
+          messageInput.value = "";
+          autoResizeInput(); // Reset to min-height
+          sendBtn.disabled = false;
+        }
+      }
+
+      // Scroll handling
+      let scrollTimeout;
+      chatContainer.addEventListener("scroll", () => {
+        userIsScrolling = true;
+        clearTimeout(scrollTimeout);
+
+        const isNearBottom =
+          chatContainer.scrollHeight -
+            chatContainer.scrollTop -
+            chatContainer.clientHeight <
+          100;
+        scrollToBottomBtn.classList.toggle("show", !isNearBottom);
+
+        scrollTimeout = setTimeout(() => {
+          userIsScrolling = false;
+        }, 500);
+      });
+
+      scrollToBottomBtn.addEventListener("click", () => {
+        chatContainer.scrollTo({
+          top: chatContainer.scrollHeight,
+          behavior: "smooth",
+        });
+      });
+
+      // Input handlers
+      sendBtn.addEventListener("click", sendMessage);
+      messageInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      // File Upload Logic
+      uploadBtn.addEventListener("click", () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener("change", async () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        // Preflight size check (50MB hard limit to match server)
+        const MAX_SIZE_MB = 50;
+        if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+          alert(
+            `File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max limit is ${MAX_SIZE_MB}MB.`,
+          );
+          fileInput.value = "";
+          return;
+        }
+        logToScreen(
+          `Using upload target selector: ${uploadTargetSelector || "auto-detect"}`,
+          "#999",
+        );
+
+        // Visual feedback
+        const originalIcon = uploadBtn.innerHTML;
+        uploadBtn.innerHTML = "⏳";
+        uploadBtn.disabled = true;
+        logToScreen(
+          `Uploading: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)...`,
+          "#3b82f6",
+        );
+
+        try {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const base64Content = e.target.result.split(",")[1]; // Remove data URL prefix
+
+            const response = await fetch("/upload", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: JSON.stringify({
+                name: file.name,
+                content: base64Content,
+                targetSelector: uploadTargetSelector || undefined,
+              }),
+            });
+
+            if (response.ok) {
+              const result = await response.json();
+              logToScreen(`Upload success: ${file.name}`, "#4ade80");
+              if (result.injected) {
+                alert(`Uploaded and injected: ${result.path}`);
+              } else {
+                const reason = result.reason || "could_not_locate_file_input";
+                const msg = `File saved but not injected (${reason}). If you know the file input selector, enter it to retry next time.`;
+                alert(msg);
+                const userSelector = prompt(
+                  'Optional CSS selector for the file input (e.g., input[type="file"])',
+                  uploadTargetSelector,
+                );
+                if (userSelector) {
+                  uploadTargetSelector = userSelector.trim();
+                  localStorage.setItem(
+                    "ag_upload_target",
+                    uploadTargetSelector,
+                  );
+                }
+              }
+            } else {
+              const error = await response
+                .json()
+                .catch(() => ({ error: response.statusText }));
+              const msg =
+                response.status === 413
+                  ? "File too large for server."
+                  : error.error;
+              logToScreen(`Upload failed: ${msg}`, "#f87171");
+              alert(`Upload failed: ${msg}`);
+            }
+          };
+          reader.onerror = () => {
+            alert("Error reading file");
+          };
+          reader.readAsDataURL(file);
+        } catch (err) {
+          console.error("Upload error:", err);
+          alert("Upload error");
+        } finally {
+          uploadBtn.innerHTML = originalIcon;
+          uploadBtn.disabled = false;
+          fileInput.value = ""; // Reset for next upload
+        }
+      });
+
+      // Voice Input Logic
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true; // Continuous listening
+        recognition.interimResults = true; // Real-time feedback
+        recognition.lang = "en-US";
+
+        let isListening = false;
+        let baseText = "";
+
+        micBtn.addEventListener("click", () => {
+          if (isListening) {
+            recognition.stop();
+            return;
+          }
+
+          try {
+            // Capture current text
+            baseText = messageInput.value;
+            if (baseText && !baseText.endsWith(" ") && !baseText.endsWith("\n"))
+              baseText += " ";
+
+            recognition.start();
+            isListening = true;
+            micBtn.innerHTML = "🔴";
+            micBtn.classList.add("listening");
+            micBtn.style.color = "#ff4444";
+            micBtn.style.background = "#3a3a3a";
+            micBtn.style.boxShadow = "0 0 0 3px rgba(255, 68, 68, 0.3)";
+          } catch (e) {
+            console.error(e);
+          }
         });
 
-        closeInstancesBtn.addEventListener('click', () => {
-            instancesModal.classList.remove('show');
-        });
+        recognition.onresult = (event) => {
+          // event.results contains the accumulator for this session
+          let sessionTranscript = "";
+          for (let i = 0; i < event.results.length; ++i) {
+            sessionTranscript += event.results[i][0].transcript;
+          }
 
-        async function fetchInstances() {
-            instancesList.innerHTML = `
+          // Smooth real-time update
+          messageInput.value = baseText + sessionTranscript;
+
+          // Auto-resize logic so the textarea grows as we speak
+          messageInput.style.height = "auto"; // Reset to calculate scrollHeight
+          messageInput.style.height =
+            Math.min(messageInput.scrollHeight, 120) + "px";
+          messageInput.scrollTop = messageInput.scrollHeight;
+          return;
+
+          // Append any new final results
+          if (currentFinal) {
+            const current = messageInput.value;
+            messageInput.value = (
+              current +
+              (current && !current.endsWith(" ") ? " " : "") +
+              currentFinal
+            ).trim();
+          }
+
+          // Note: We don't display interim directly in value to avoid cursor jumping,
+          // but enabling it makes the engine faster.
+          // A more advanced UI would overlay interim text, but standard append is safer.
+
+          messageInput.dispatchEvent(new Event("input"));
+          messageInput.scrollTop = messageInput.scrollHeight;
+        };
+
+        recognition.onend = () => {
+          isListening = false;
+          micBtn.innerHTML = "🎙️";
+          micBtn.classList.remove("listening");
+          micBtn.style.color = "#fff";
+          micBtn.style.background = "#3a3a3a";
+          micBtn.style.boxShadow = "none";
+        };
+
+        recognition.onerror = (event) => {
+          console.error("Speech recognition error", event.error);
+          micBtn.innerHTML = "⚠️";
+          setTimeout(() => {
+            if (!micBtn.classList.contains("listening"))
+              micBtn.innerHTML = "🎙️";
+          }, 2000);
+        };
+      } else {
+        micBtn.style.display = "none";
+        console.log("Web Speech API not supported");
+      }
+
+      // Instance Handling
+      const instancesBtn = document.getElementById("instancesBtn");
+      const instancesModal = document.getElementById("instancesModal");
+      const instancesList = document.getElementById("instancesList");
+      const closeInstancesBtn = document.getElementById("closeInstancesBtn");
+      let activeTargetId = null;
+
+      instancesBtn.addEventListener("click", () => {
+        instancesModal.classList.add("show");
+        fetchInstances();
+      });
+
+      closeInstancesBtn.addEventListener("click", () => {
+        instancesModal.classList.remove("show");
+      });
+
+      async function fetchInstances() {
+        instancesList.innerHTML = `
                 <div class="loading" style="padding:20px;">
                      <div class="spinner"></div>
                 </div>
             `;
 
-            try {
-                const res = await fetch('/instances', {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
+        try {
+          const res = await fetch("/instances", {
+            headers: { Authorization: `Bearer ${authToken}` },
+          });
 
-                if (res.status === 401) {
-                    instancesModal.classList.remove('show');
-                    showLogin();
-                    return;
-                }
+          if (res.status === 401) {
+            instancesModal.classList.remove("show");
+            showLogin();
+            return;
+          }
 
-                const data = await res.json();
-                activeTargetId = data.activeTargetId || null;
-                renderInstances(data.instances || []);
-            } catch (e) {
-                instancesList.innerHTML = `<div style="color:#ff6b6b;text-align:center;">Failed to load instances</div>`;
-            }
+          const data = await res.json();
+          activeTargetId = data.activeTargetId || null;
+          renderInstances(data.instances || []);
+        } catch (e) {
+          instancesList.innerHTML = `<div style="color:#ff6b6b;text-align:center;">Failed to load instances</div>`;
+        }
+      }
+
+      function renderInstances(instances) {
+        if (instances.length === 0) {
+          instancesList.innerHTML = `<div style="text-align:center;color:#666;">No instances found</div>`;
+          return;
         }
 
-        function renderInstances(instances) {
-            if (instances.length === 0) {
-                instancesList.innerHTML = `<div style="text-align:center;color:#666;">No instances found</div>`;
-                return;
-            }
-
-            instancesList.innerHTML = '';
-            instances.forEach(inst => {
-                const isItemActive = inst.id && inst.id === activeTargetId;
-                const el = document.createElement('div');
-                el.style.cssText = `
+        instancesList.innerHTML = "";
+        instances.forEach((inst) => {
+          const isItemActive = inst.id && inst.id === activeTargetId;
+          const el = document.createElement("div");
+          el.style.cssText = `
                     padding: 12px;
-                    background: ${isItemActive ? '#3b82f6' : '#1a1a1a'};
+                    background: ${isItemActive ? "#3b82f6" : "#1a1a1a"};
                     border: 1px solid #3a3a3a;
                     border-radius: 8px;
                     cursor: pointer;
@@ -1178,576 +1568,661 @@
                     justify-content: space-between;
                     align-items: center;
                 `;
-                const displayTitle = inst.title && inst.title.trim().length > 0 ? inst.title : 'Target';
-                el.innerHTML = `
+          const displayTitle =
+            inst.title && inst.title.trim().length > 0 ? inst.title : "Target";
+          el.innerHTML = `
                     <div style="font-weight:600; margin-bottom:4px;">${displayTitle}</div>
-                    <div style="font-size:12px;opacity:0.7;">${isItemActive ? 'Active' : 'Switch'}</div>
+                    <div style="font-size:12px;opacity:0.7;">${isItemActive ? "Active" : "Switch"}</div>
                 `;
 
-                if (!isItemActive && inst.id) {
-                    el.addEventListener('click', () => switchInstance(inst.id));
-                    el.addEventListener('mouseover', () => el.style.borderColor = '#3b82f6');
-                    el.addEventListener('mouseout', () => el.style.borderColor = '#3a3a3a');
-                }
+          if (!isItemActive && inst.id) {
+            el.addEventListener("click", () => switchInstance(inst.id));
+            el.addEventListener(
+              "mouseover",
+              () => (el.style.borderColor = "#3b82f6"),
+            );
+            el.addEventListener(
+              "mouseout",
+              () => (el.style.borderColor = "#3a3a3a"),
+            );
+          }
 
-                instancesList.appendChild(el);
-            });
-        }
+          instancesList.appendChild(el);
+        });
+      }
 
-        async function switchInstance(targetId) {
-            // Show loading state
-            instancesList.innerHTML = `
+      async function switchInstance(targetId) {
+        // Show loading state
+        instancesList.innerHTML = `
                 <div class="loading" style="padding:20px;">
                      <div class="spinner"></div>
                      <span>Switching...</span>
                 </div>
             `;
 
-            try {
-                const res = await fetch('/instance', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify({ targetId })
-                });
+        try {
+          const res = await fetch("/instance", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({ targetId }),
+          });
 
-                if (res.ok) {
-                    // Success! Close modal and show loading state
-                    instancesModal.classList.remove('show');
-                    chatContent.innerHTML = `
+          if (res.ok) {
+            // Success! Close modal and show loading state
+            instancesModal.classList.remove("show");
+            chatContent.innerHTML = `
                         <div class="loading">
                             <div class="spinner"></div>
                             <span>Loading...</span>
                         </div>
                     `;
 
-                    // Request snapshot with retry mechanism
-                    let retries = 0;
-                    const maxRetries = 3;
-                    const retryDelay = 500;
+            // Request snapshot with retry mechanism
+            let retries = 0;
+            const maxRetries = 3;
+            const retryDelay = 500;
 
-                    const requestSnapshot = () => {
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            console.log(`Requesting snapshot (attempt ${retries + 1}/${maxRetries})`);
-                            ws.send(JSON.stringify({ type: 'request_snapshot' }));
-                        }
-                    };
+            const requestSnapshot = () => {
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                console.log(
+                  `Requesting snapshot (attempt ${retries + 1}/${maxRetries})`,
+                );
+                ws.send(JSON.stringify({ type: "request_snapshot" }));
+              }
+            };
 
-                    // Immediate request
-                    requestSnapshot();
+            // Immediate request
+            requestSnapshot();
 
-                    // Retry if still showing loading after delay
-                    const retryInterval = setInterval(() => {
-                        retries++;
-                        if (retries >= maxRetries || !document.querySelector('.loading')) {
-                            clearInterval(retryInterval);
-                            return;
-                        }
-                        requestSnapshot();
-                    }, retryDelay);
-
-                } else {
-                    throw new Error('Failed to switch');
-                }
-            } catch (e) {
-                fetchInstances(); // Reload list to show error state eventually, or just refresh
-            }
+            // Retry if still showing loading after delay
+            const retryInterval = setInterval(() => {
+              retries++;
+              if (
+                retries >= maxRetries ||
+                !document.querySelector(".loading")
+              ) {
+                clearInterval(retryInterval);
+                return;
+              }
+              requestSnapshot();
+            }, retryDelay);
+          } else {
+            throw new Error("Failed to switch");
+          }
+        } catch (e) {
+          fetchInstances(); // Reload list to show error state eventually, or just refresh
         }
+      }
 
-        messageInput.addEventListener('input', () => {
-            messageInput.style.height = '44px';
-        });
+      messageInput.addEventListener("input", () => {
+        messageInput.style.height = "44px";
+      });
 
-        // --- Microphone / Speech to Text Logic ---
-        let recognition = null;
-        let isRecording = false;
+      // --- Microphone / Speech to Text Logic ---
+      let recognition = null;
+      let isRecording = false;
 
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
+      if (
+        "webkitSpeechRecognition" in window ||
+        "SpeechRecognition" in window
+      ) {
+        const SpeechRecognition =
+          window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = "en-US";
 
-            recognition.onstart = () => {
-                isRecording = true;
-                micBtn.style.background = '#ef4444'; // Red when recording
-                micBtn.style.color = '#fff';
-                logToScreen('Recording...', '#ef4444');
-            };
+        recognition.onstart = () => {
+          isRecording = true;
+          micBtn.style.background = "#ef4444"; // Red when recording
+          micBtn.style.color = "#fff";
+          logToScreen("Recording...", "#ef4444");
+        };
 
-            recognition.onresult = (event) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
+        recognition.onresult = (event) => {
+          let interimTranscript = "";
+          let finalTranscript = "";
 
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
-                }
-
-                if (finalTranscript) {
-                    messageInput.value += (messageInput.value ? ' ' : '') + finalTranscript;
-                    autoResizeInput();
-                }
-            };
-
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
-                logToScreen(`Mic Error: ${event.error}`, '#f87171');
-                stopRecording();
-            };
-
-            recognition.onend = () => {
-                stopRecording();
-            };
-        } else {
-            micBtn.style.opacity = '0.3';
-            micBtn.title = 'Speech Recognition not supported';
-        }
-
-        function stopRecording() {
-            isRecording = false;
-            micBtn.style.background = '';
-            micBtn.style.color = '';
-            if (recognition) recognition.stop();
-        }
-
-        micBtn.addEventListener('click', () => {
-            if (!recognition) return;
-            if (isRecording) {
-                stopRecording();
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
             } else {
-                try {
-                    recognition.start();
-                } catch (e) {
-                    console.error('Recognition start error:', e);
-                }
+              interimTranscript += event.results[i][0].transcript;
             }
-        });
+          }
 
-        function autoResizeInput() {
-            // Min-height for mobile design is 24px (text) inside the bubble
-            messageInput.style.height = '24px';
-            const newHeight = Math.min(messageInput.scrollHeight, 160);
-            messageInput.style.height = newHeight + 'px';
+          if (finalTranscript) {
+            messageInput.value +=
+              (messageInput.value ? " " : "") + finalTranscript;
+            autoResizeInput();
+          }
+        };
 
-            // Scroll textarea to bottom of its own content
-            messageInput.scrollTop = messageInput.scrollHeight;
-        }
+        recognition.onerror = (event) => {
+          console.error("Speech recognition error:", event.error);
+          logToScreen(`Mic Error: ${event.error}`, "#f87171");
+          stopRecording();
+        };
 
-        messageInput.addEventListener('input', autoResizeInput);
-        // Helper to generate unique CSS selector
-        function getUniqueSelector(el) {
-            if (!el) return '';
-            if (el.id) return '#' + CSS.escape(el.id);
-            // path fallback
-            const path = [];
-            while (el && el.nodeType === Node.ELEMENT_NODE) {
-                let selector = el.nodeName.toLowerCase();
-                if (el.id) {
-                    selector = '#' + CSS.escape(el.id);
-                    path.unshift(selector);
-                    break;
-                } else {
-                    let sib = el, nth = 1;
-                    while (sib = sib.previousElementSibling) {
-                        if (sib.nodeName.toLowerCase() === selector) nth++;
-                    }
-                    if (nth != 1) selector += ":nth-of-type(" + nth + ")";
-                }
-                path.unshift(selector);
-                el = el.parentNode;
-                if (el instanceof ShadowRoot) {
-                    el = el.host;
-                }
-            }
-            return path.join(' > ');
-        }
+        recognition.onend = () => {
+          stopRecording();
+        };
+      } else {
+        micBtn.style.opacity = "0.3";
+        micBtn.title = "Speech Recognition not supported";
+      }
 
-        // Click Forwarding Logic
-        chatContent.addEventListener('click', async (e) => {
-            if (!authToken) return;
+      function stopRecording() {
+        isRecording = false;
+        micBtn.style.background = "";
+        micBtn.style.color = "";
+        if (recognition) recognition.stop();
+      }
 
-            // 1. Identify what was clicked
-            let target = e.target;
-
-            // Traverse up slightly to find interactive elements
-            let interactive = target;
-            while (interactive && interactive !== chatContent) {
-                const tag = interactive.tagName.toLowerCase();
-                if (tag === 'button' || tag === 'a' || interactive.getAttribute('role') === 'button') {
-                    target = interactive;
-                    break;
-                }
-                interactive = interactive.parentElement;
-            }
-
-            const text = target.innerText || '';
-            const tag = target.tagName.toLowerCase();
-            const selector = getUniqueSelector(target);
-
-            // Ignore container clicks
-            if (tag === 'div' && target.id === 'chatContent') return;
-
-            console.log(`Click: "${text}" <${tag}> [${selector}]`);
-
-            // 2. Visual Feedback (Ripple effect)
-            const rect = target.getBoundingClientRect();
-            const ripple = document.createElement('div');
-            ripple.className = 'click-ripple';
-            ripple.style.left = `${e.clientX}px`;
-            ripple.style.top = `${e.clientY}px`;
-            document.body.appendChild(ripple);
-
-            setTimeout(() => ripple.remove(), 1000);
-
-            // 3. Send to server
-            try {
-                const res = await fetch('/click', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify({
-                        text: text.substring(0, 50),
-                        tag: tag,
-                        selector: selector,
-                        x: Math.round(e.clientX),
-                        y: Math.round(e.clientY)
-                    })
-                });
-
-                if (res.ok) {
-                    console.log('Click sent successfully');
-                } else {
-                    console.warn('Click failed on server');
-                }
-            } catch (err) {
-                console.error('Network error sending click:', err);
-            }
-        });
-
-        // --- Native Controls Logic ---
-        const nativeStatusBar = document.getElementById('nativeStatusBar');
-        const modeVal = document.getElementById('modeVal');
-        const modelVal = document.getElementById('modelVal');
-        const modeChip = document.getElementById('modeChip');
-        const modelChip = document.getElementById('modelChip');
-        const sheetOverlay = document.getElementById('sheetOverlay');
-        const optionsSheet = document.getElementById('optionsSheet');
-        const sheetList = document.getElementById('sheetList');
-        const sheetTitle = document.getElementById('sheetTitle');
-        const sheetClose = document.getElementById('sheetClose');
-
-        let lastControlsHtml = '';
-        let currentModeSelector = '';
-        let currentModelSelector = '';
-        let currentModeText = '';
-        let currentModelText = '';
-        let pendingMenuClick = false;
-        let lastClickedType = ''; // 'mode' or 'model'
-
-        // Reusable click sender
-        async function sendClickToServer(selector, text, type) {
-            if (!authToken) return;
-            pendingMenuClick = true;
-            lastClickedType = type || '';
-            try {
-                await fetch('/click', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                    body: JSON.stringify({ selector, text })
-                });
-            } catch (err) { console.error('Error forwarding click:', err); }
-        }
-
-        function showSheet(title, options) {
-            const displayTitle = lastClickedType === 'mode' ? 'Select Mode' :
-                (lastClickedType === 'model' ? 'Select Model' : title);
-            sheetTitle.textContent = displayTitle;
-            sheetList.innerHTML = '';
-            // Deduplicate options by text
-            const seen = new Set();
-            const uniqueOptions = options.filter(opt => {
-                if (seen.has(opt.text)) return false;
-                seen.add(opt.text);
-                return true;
-            });
-            uniqueOptions.forEach(opt => {
-                const div = document.createElement('div');
-                div.className = 'option-item';
-                div.innerHTML = `<span class="icon">●</span> ${opt.text}`;
-                div.addEventListener('click', async () => {
-                    // Optimistically update the UI for Mode selection
-                    if (lastClickedType === 'mode') {
-                        modeVal.textContent = opt.text;
-                        currentModeText = opt.text;
-                    } else if (lastClickedType === 'model') {
-                        modelVal.textContent = opt.text;
-                        currentModelText = opt.text;
-                    }
-
-                    await sendClickToServer(opt.selector, opt.text, lastClickedType);
-                    hideSheet();
-
-                    // Request a fresh snapshot to confirm the change
-                    setTimeout(() => {
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ type: 'request_snapshot' }));
-                        }
-                    }, 500);
-                });
-                sheetList.appendChild(div);
-            });
-            sheetOverlay.style.display = 'block';
-            setTimeout(() => {
-                sheetOverlay.classList.add('show');
-                optionsSheet.classList.add('show');
-            }, 10);
-        }
-
-        function hideSheet() {
-            sheetOverlay.classList.remove('show');
-            optionsSheet.classList.remove('show');
-            setTimeout(() => { sheetOverlay.style.display = 'none'; }, 300);
-            pendingMenuClick = false;
-        }
-
-        if (sheetClose) sheetClose.addEventListener('click', hideSheet);
-        if (sheetOverlay) sheetOverlay.addEventListener('click', hideSheet);
-        if (modeChip) modeChip.addEventListener('click', () => { if (currentModeSelector) sendClickToServer(currentModeSelector, currentModeText, 'mode'); });
-        if (modelChip) modelChip.addEventListener('click', () => { if (currentModelSelector) sendClickToServer(currentModelSelector, currentModelText, 'model'); });
-
-        // ============================================================================
-        // NATIVE CONTROLS SYSTEM
-        // ============================================================================
-        // This system captures the desktop VS Code UI state and reimplements key
-        // controls in a mobile-first way. Currently implemented: Mode & Model selectors.
-        //
-        // ARCHITECTURE:
-        // 1. Server captures TWO HTML snapshots:
-        //    - `html`: Clean #cascade only (for rendering chat)
-        //    - `controlsHtml`: Full document.body (for scraping button state)
-        // 2. Client calls updateControls(controlsHtml) to extract button data
-        // 3. Native mobile UI (Status Bar, Bottom Sheet) displays the options
-        // 4. Clicks are forwarded to desktop via POST /click
-        //
-        // TODO: MOBILE-FIRST REIMPLEMENTATION OF FILTERED FEATURES
-        // ============================================================================
-        //
-        // The following VS Code features are currently FILTERED OUT (not visible in
-        // mobile view) but should be reimplemented in a mobile-first way:
-        //
-        // TODO: [P1] Changes Overview Button
-        //   - Desktop: Shows pending file changes, accept/reject buttons
-        //   - Mobile Strategy:
-        //     * Add FAB (Floating Action Button) with badge count (e.g., "3 changes")
-        //     * Tap opens full-screen modal with swipeable cards (one per file)
-        //     * Each card shows diff preview + Accept/Reject buttons
-        //     * Use native mobile gestures (swipe to accept/reject)
-        //   - Implementation:
-        //     1. Scrape `controlsHtml` for buttons matching "Accept", "Reject", "changes"
-        //     2. Extract file paths and diff data from surrounding DOM
-        //     3. Create mobile UI in #chatContent overlay
-        //     4. Forward accept/reject clicks via POST /click
-        //
-        // TODO: [P1] Terminal Access
-        //   - Desktop: Embedded terminal with full command history
-        //   - Mobile Strategy:
-        //     * Add "Terminal" button to native Status Bar
-        //     * Tap opens bottom sheet with terminal output (read-only view)
-        //     * "Run Command" button opens input modal for new commands
-        //     * Use monospace font, syntax highlighting for output
-        //   - Implementation:
-        //     1. Server already captures terminal buffer in CAPTURE_SCRIPT (xterm logic)
-        //     2. Extract terminal content from `controlsHtml` (.xterm, .terminal-wrapper)
-        //     3. Render in mobile-optimized view (scrollable, copy-friendly)
-        //     4. For input: scrape terminal input selector, forward via POST /click or /send
-        //
-        // TODO: [P2] Artifacts Panel
-        //   - Desktop: Side panel showing generated files, images, diagrams
-        //   - Mobile Strategy:
-        //     * Add "Artifacts" chip to native Status Bar (with count badge)
-        //     * Tap opens carousel view (swipe between artifacts)
-        //     * Each artifact shows preview + "Open in Editor" / "Download" buttons
-        //     * Images/videos render natively, code shows syntax-highlighted preview
-        //   - Implementation:
-        //     1. Scrape `controlsHtml` for artifact containers ([class*="artifact"])
-        //     2. Extract artifact metadata (type, name, content)
-        //     3. Build carousel UI with native mobile controls
-        //     4. For "Open" action: forward click to desktop button
-        //
-        // TODO: [P2] Review Changes (Code Review Mode)
-        //   - Desktop: Inline diff view with comment threads
-        //   - Mobile Strategy:
-        //     * Similar to Changes Overview, but focused on review workflow
-        //     * Full-screen diff view with "Previous/Next" navigation
-        //     * Tap line to add comment (opens keyboard with comment input)
-        //     * "Approve" / "Request Changes" buttons at bottom
-        //   - Implementation:
-        //     1. Scrape `controlsHtml` for review UI elements
-        //     2. Extract diff hunks, existing comments, review state
-        //     3. Build mobile review UI with gesture navigation
-        //     4. Forward approve/comment actions via POST /click
-        //
-        // GENERAL PATTERN FOR NEW FEATURES:
-        // 1. Identify desktop button/panel in `controlsHtml` via querySelector
-        // 2. Extract state/data from surrounding DOM
-        // 3. Design mobile-first UI (FAB, Bottom Sheet, Modal, Carousel)
-        // 4. Forward user actions to desktop via POST /click with precise selectors
-        // 5. Use `pendingMenuClick` pattern to force immediate UI updates
-        // ============================================================================
-
-        function updateControls(html) {
-            // Force update if we are expecting a menu click, or if HTML changed
-            if (html === lastControlsHtml && !pendingMenuClick) return;
-            lastControlsHtml = html;
-            const temp = document.createElement('div');
-            temp.innerHTML = html;
-
-            // 1. Gather all potential buttons
-            const allBtns = Array.from(temp.querySelectorAll('button, [role="button"], [class*="button"]'));
-
-            // 2. Scan for Mode and Model buttons based on DOM structure
-            // Discovery-based detection (more robust than tag-only)
-            const modeBtn = allBtns.find(btn => {
-                const text = (btn.innerText || btn.textContent || '').trim();
-                // Exact matches for current mode labels
-                if (text === 'Planning' || text === 'Fast' || text === 'Agent') {
-                    // Ensure it's not the model button which might also contain these words in some contexts
-                    // Mode buttons typically have no ID or a very generic one, whereas Model buttons often have headlessui IDs
-                    return !btn.id || !btn.id.includes('headlessui');
-                }
-                return false;
-            });
-
-            const modelBtn = allBtns.find(btn => {
-                if (btn === modeBtn) return false;
-                const id = btn.id || '';
-                const text = (btn.innerText || btn.textContent || '').trim();
-                // Model button usually has a headlessui ID and contains model-like keywords
-                const isModelId = id.includes('headlessui-popover-button') || id.includes('headlessui-menu-button');
-                const hasModelText = text.includes('Gemini') || text.includes('Claude') || text.includes('Pro') || text.includes('Sonnet') || text.includes('gpt');
-
-                return isModelId && hasModelText;
-            });
-
-            // 4. Update UI & Hide Legacy Buttons
-            let hideSelectors = [];
-
-            if (modeBtn) {
-                const text = (modeBtn.innerText || modeBtn.textContent || '').trim();
-                modeVal.textContent = text;
-                modeVal.style.color = '#3b82f6';
-                currentModeSelector = getUniqueSelector(modeBtn);
-                currentModeText = text;
-                nativeStatusBar.style.display = 'flex';
-                hideSelectors.push(currentModeSelector);
-            }
-
-            if (modelBtn) {
-                const text = (modelBtn.innerText || modelBtn.textContent || '').trim();
-                modelVal.textContent = text;
-                currentModelSelector = getUniqueSelector(modelBtn);
-                currentModelText = text;
-                nativeStatusBar.style.display = 'flex';
-                hideSelectors.push(currentModelSelector);
-            }
-
-            // Sync legacy hider style
-            let hiderStyle = document.getElementById('legacy-hider-style');
-            if (!hiderStyle) {
-                hiderStyle = document.createElement('style');
-                hiderStyle.id = 'legacy-hider-style';
-                document.head.appendChild(hiderStyle);
-            }
-            if (hideSelectors.length > 0) {
-                hiderStyle.textContent = hideSelectors.map(sel => `${sel} { opacity: 0 !important; pointer-events: none !important; }`).join('\n');
-            }
-
-            // 3. Detect Open Panels (Popovers & Menus)
-            if (!pendingMenuClick) return;
-
-            const panelSelectors = [
-                '[id^="headlessui-popover-panel"]',
-                '[id^="headlessui-menu-items"]',
-                '[id^="headlessui-listbox-options"]',
-                '[role="menu"]',
-                '[role="listbox"]',
-                '[role="dialog"]',  // ← Mode menu uses this!
-                '[class*="popover"]',
-                '[class*="menu"]',
-                '.fixed',
-                '.absolute'
-            ];
-
-            let bestPanel = null;
-            let bestItems = [];
-
-            for (const sel of panelSelectors) {
-                const panels = Array.from(temp.querySelectorAll(sel));
-                for (const p of panels) {
-                    // Skip tiny or obviously wrong things
-                    if (p.textContent.trim().length < 2) continue;
-
-                    const itemSels = [
-                        'button',
-                        '[role="menuitem"]',
-                        '[role="option"]',
-                        'li',
-                        '.cursor-pointer',  // ← Mode menu items have this class!
-                        'a',
-                        'div.cursor-pointer'  // ← Explicitly add div with cursor-pointer
-                    ];
-                    const foundItems = Array.from(p.querySelectorAll(itemSels.join(', ')))
-                        .map(item => {
-                            let text = (item.innerText || item.textContent || '').replace(/\s+/g, ' ').trim();
-                            // For Mode menu, extract just the title (first line)
-                            if (item.querySelector('.font-medium')) {
-                                text = item.querySelector('.font-medium').textContent.trim();
-                            }
-                            return { text, selector: getUniqueSelector(item) };
-                        })
-                        .filter(it => it.text.length > 0 && it.text.length < 100);
-
-                    // Heuristic Filter: If we are looking for a specific type, ensure at least one item matches
-                    let matchesType = true;
-                    if (lastClickedType === 'mode') {
-                        const modeWords = ['Planning', 'Fast', 'Agent', 'Ask', 'Execution', 'Edit', 'Chat', 'Writing'];
-                        matchesType = foundItems.some(it => modeWords.some(w => it.text.includes(w)));
-                    } else if (lastClickedType === 'model') {
-                        const modelWords = ['Gemini', 'Claude', 'gpt', 'Sonnet', 'Pro', 'Flash', 'Haiku', 'Llama'];
-                        matchesType = foundItems.some(it => modelWords.some(w => it.text.toLowerCase().includes(w.toLowerCase())));
-                    }
-
-                    if (matchesType && foundItems.length > bestItems.length) {
-                        bestItems = foundItems;
-                        bestPanel = p;
-                    }
-                }
-            }
-
-            if (bestPanel && bestItems.length > 0) {
-                if (!optionsSheet.classList.contains('show')) {
-                    showSheet('Select Option', bestItems);
-                    pendingMenuClick = false;
-                }
-            }
-        }
-
-        // Initial Start
-        if (authToken) {
-            connectWebSocket();
+      micBtn.addEventListener("click", () => {
+        if (!recognition) return;
+        if (isRecording) {
+          stopRecording();
         } else {
-            showLogin();
+          try {
+            recognition.start();
+          } catch (e) {
+            console.error("Recognition start error:", e);
+          }
         }
-    </script>
-</body>
+      });
 
+      function autoResizeInput() {
+        // Min-height for mobile design is 24px (text) inside the bubble
+        messageInput.style.height = "24px";
+        const newHeight = Math.min(messageInput.scrollHeight, 160);
+        messageInput.style.height = newHeight + "px";
+
+        // Scroll textarea to bottom of its own content
+        messageInput.scrollTop = messageInput.scrollHeight;
+      }
+
+      messageInput.addEventListener("input", autoResizeInput);
+      // Helper to generate unique CSS selector
+      function getUniqueSelector(el) {
+        if (!el) return "";
+        if (el.id) return "#" + CSS.escape(el.id);
+        // path fallback
+        const path = [];
+        while (el && el.nodeType === Node.ELEMENT_NODE) {
+          let selector = el.nodeName.toLowerCase();
+          if (el.id) {
+            selector = "#" + CSS.escape(el.id);
+            path.unshift(selector);
+            break;
+          } else {
+            let sib = el,
+              nth = 1;
+            while ((sib = sib.previousElementSibling)) {
+              if (sib.nodeName.toLowerCase() === selector) nth++;
+            }
+            if (nth != 1) selector += ":nth-of-type(" + nth + ")";
+          }
+          path.unshift(selector);
+          el = el.parentNode;
+          if (el instanceof ShadowRoot) {
+            el = el.host;
+          }
+        }
+        return path.join(" > ");
+      }
+
+      // Click Forwarding Logic
+      chatContent.addEventListener("click", async (e) => {
+        if (!authToken) return;
+
+        // 1. Identify what was clicked
+        let target = e.target;
+
+        // Traverse up slightly to find interactive elements
+        let interactive = target;
+        while (interactive && interactive !== chatContent) {
+          const tag = interactive.tagName.toLowerCase();
+          if (
+            tag === "button" ||
+            tag === "a" ||
+            interactive.getAttribute("role") === "button"
+          ) {
+            target = interactive;
+            break;
+          }
+          interactive = interactive.parentElement;
+        }
+
+        const text = target.innerText || "";
+        const tag = target.tagName.toLowerCase();
+        const selector = getUniqueSelector(target);
+
+        // Ignore container clicks
+        if (tag === "div" && target.id === "chatContent") return;
+
+        console.log(`Click: "${text}" <${tag}> [${selector}]`);
+
+        // 2. Visual Feedback (Ripple effect)
+        const rect = target.getBoundingClientRect();
+        const ripple = document.createElement("div");
+        ripple.className = "click-ripple";
+        ripple.style.left = `${e.clientX}px`;
+        ripple.style.top = `${e.clientY}px`;
+        document.body.appendChild(ripple);
+
+        setTimeout(() => ripple.remove(), 1000);
+
+        // 3. Send to server
+        try {
+          const res = await fetch("/click", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+              text: text.substring(0, 50),
+              tag: tag,
+              selector: selector,
+              x: Math.round(e.clientX),
+              y: Math.round(e.clientY),
+            }),
+          });
+
+          if (res.ok) {
+            console.log("Click sent successfully");
+          } else {
+            console.warn("Click failed on server");
+          }
+        } catch (err) {
+          console.error("Network error sending click:", err);
+        }
+      });
+
+      // --- Native Controls Logic ---
+      const nativeStatusBar = document.getElementById("nativeStatusBar");
+      const modeVal = document.getElementById("modeVal");
+      const modelVal = document.getElementById("modelVal");
+      const modeChip = document.getElementById("modeChip");
+      const modelChip = document.getElementById("modelChip");
+      const sheetOverlay = document.getElementById("sheetOverlay");
+      const optionsSheet = document.getElementById("optionsSheet");
+      const sheetList = document.getElementById("sheetList");
+      const sheetTitle = document.getElementById("sheetTitle");
+      const sheetClose = document.getElementById("sheetClose");
+
+      let lastControlsHtml = "";
+      let currentModeSelector = "";
+      let currentModelSelector = "";
+      let currentModeText = "";
+      let currentModelText = "";
+      let pendingMenuClick = false;
+      let lastClickedType = ""; // 'mode' or 'model'
+
+      // Reusable click sender
+      async function sendClickToServer(selector, text, type) {
+        if (!authToken) return;
+        pendingMenuClick = true;
+        lastClickedType = type || "";
+        try {
+          await fetch("/click", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({ selector, text }),
+          });
+        } catch (err) {
+          console.error("Error forwarding click:", err);
+        }
+      }
+
+      function showSheet(title, options) {
+        const displayTitle =
+          lastClickedType === "mode"
+            ? "Select Mode"
+            : lastClickedType === "model"
+              ? "Select Model"
+              : title;
+        sheetTitle.textContent = displayTitle;
+        sheetList.innerHTML = "";
+        // Deduplicate options by text
+        const seen = new Set();
+        const uniqueOptions = options.filter((opt) => {
+          if (seen.has(opt.text)) return false;
+          seen.add(opt.text);
+          return true;
+        });
+        uniqueOptions.forEach((opt) => {
+          const div = document.createElement("div");
+          div.className = "option-item";
+          div.innerHTML = `<span class="icon">●</span> ${opt.text}`;
+          div.addEventListener("click", async () => {
+            // Optimistically update the UI for Mode selection
+            if (lastClickedType === "mode") {
+              modeVal.textContent = opt.text;
+              currentModeText = opt.text;
+            } else if (lastClickedType === "model") {
+              modelVal.textContent = opt.text;
+              currentModelText = opt.text;
+            }
+
+            await sendClickToServer(opt.selector, opt.text, lastClickedType);
+            hideSheet();
+
+            // Request a fresh snapshot to confirm the change
+            setTimeout(() => {
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "request_snapshot" }));
+              }
+            }, 500);
+          });
+          sheetList.appendChild(div);
+        });
+        sheetOverlay.style.display = "block";
+        setTimeout(() => {
+          sheetOverlay.classList.add("show");
+          optionsSheet.classList.add("show");
+        }, 10);
+      }
+
+      function hideSheet() {
+        sheetOverlay.classList.remove("show");
+        optionsSheet.classList.remove("show");
+        setTimeout(() => {
+          sheetOverlay.style.display = "none";
+        }, 300);
+        pendingMenuClick = false;
+      }
+
+      if (sheetClose) sheetClose.addEventListener("click", hideSheet);
+      if (sheetOverlay) sheetOverlay.addEventListener("click", hideSheet);
+      if (modeChip)
+        modeChip.addEventListener("click", () => {
+          if (currentModeSelector)
+            sendClickToServer(currentModeSelector, currentModeText, "mode");
+        });
+      if (modelChip)
+        modelChip.addEventListener("click", () => {
+          if (currentModelSelector)
+            sendClickToServer(currentModelSelector, currentModelText, "model");
+        });
+
+      // ============================================================================
+      // NATIVE CONTROLS SYSTEM
+      // ============================================================================
+      // This system captures the desktop VS Code UI state and reimplements key
+      // controls in a mobile-first way. Currently implemented: Mode & Model selectors.
+      //
+      // ARCHITECTURE:
+      // 1. Server captures TWO HTML snapshots:
+      //    - `html`: Clean #cascade only (for rendering chat)
+      //    - `controlsHtml`: Full document.body (for scraping button state)
+      // 2. Client calls updateControls(controlsHtml) to extract button data
+      // 3. Native mobile UI (Status Bar, Bottom Sheet) displays the options
+      // 4. Clicks are forwarded to desktop via POST /click
+      //
+      // TODO: MOBILE-FIRST REIMPLEMENTATION OF FILTERED FEATURES
+      // ============================================================================
+      //
+      // The following VS Code features are currently FILTERED OUT (not visible in
+      // mobile view) but should be reimplemented in a mobile-first way:
+      //
+      // TODO: [P1] Changes Overview Button
+      //   - Desktop: Shows pending file changes, accept/reject buttons
+      //   - Mobile Strategy:
+      //     * Add FAB (Floating Action Button) with badge count (e.g., "3 changes")
+      //     * Tap opens full-screen modal with swipeable cards (one per file)
+      //     * Each card shows diff preview + Accept/Reject buttons
+      //     * Use native mobile gestures (swipe to accept/reject)
+      //   - Implementation:
+      //     1. Scrape `controlsHtml` for buttons matching "Accept", "Reject", "changes"
+      //     2. Extract file paths and diff data from surrounding DOM
+      //     3. Create mobile UI in #chatContent overlay
+      //     4. Forward accept/reject clicks via POST /click
+      //
+      // TODO: [P1] Terminal Access
+      //   - Desktop: Embedded terminal with full command history
+      //   - Mobile Strategy:
+      //     * Add "Terminal" button to native Status Bar
+      //     * Tap opens bottom sheet with terminal output (read-only view)
+      //     * "Run Command" button opens input modal for new commands
+      //     * Use monospace font, syntax highlighting for output
+      //   - Implementation:
+      //     1. Server already captures terminal buffer in CAPTURE_SCRIPT (xterm logic)
+      //     2. Extract terminal content from `controlsHtml` (.xterm, .terminal-wrapper)
+      //     3. Render in mobile-optimized view (scrollable, copy-friendly)
+      //     4. For input: scrape terminal input selector, forward via POST /click or /send
+      //
+      // TODO: [P2] Artifacts Panel
+      //   - Desktop: Side panel showing generated files, images, diagrams
+      //   - Mobile Strategy:
+      //     * Add "Artifacts" chip to native Status Bar (with count badge)
+      //     * Tap opens carousel view (swipe between artifacts)
+      //     * Each artifact shows preview + "Open in Editor" / "Download" buttons
+      //     * Images/videos render natively, code shows syntax-highlighted preview
+      //   - Implementation:
+      //     1. Scrape `controlsHtml` for artifact containers ([class*="artifact"])
+      //     2. Extract artifact metadata (type, name, content)
+      //     3. Build carousel UI with native mobile controls
+      //     4. For "Open" action: forward click to desktop button
+      //
+      // TODO: [P2] Review Changes (Code Review Mode)
+      //   - Desktop: Inline diff view with comment threads
+      //   - Mobile Strategy:
+      //     * Similar to Changes Overview, but focused on review workflow
+      //     * Full-screen diff view with "Previous/Next" navigation
+      //     * Tap line to add comment (opens keyboard with comment input)
+      //     * "Approve" / "Request Changes" buttons at bottom
+      //   - Implementation:
+      //     1. Scrape `controlsHtml` for review UI elements
+      //     2. Extract diff hunks, existing comments, review state
+      //     3. Build mobile review UI with gesture navigation
+      //     4. Forward approve/comment actions via POST /click
+      //
+      // GENERAL PATTERN FOR NEW FEATURES:
+      // 1. Identify desktop button/panel in `controlsHtml` via querySelector
+      // 2. Extract state/data from surrounding DOM
+      // 3. Design mobile-first UI (FAB, Bottom Sheet, Modal, Carousel)
+      // 4. Forward user actions to desktop via POST /click with precise selectors
+      // 5. Use `pendingMenuClick` pattern to force immediate UI updates
+      // ============================================================================
+
+      function updateControls(html) {
+        // Force update if we are expecting a menu click, or if HTML changed
+        if (html === lastControlsHtml && !pendingMenuClick) return;
+        lastControlsHtml = html;
+        const temp = document.createElement("div");
+        temp.innerHTML = html;
+
+        // 1. Gather all potential buttons
+        const allBtns = Array.from(
+          temp.querySelectorAll('button, [role="button"], [class*="button"]'),
+        );
+
+        // 2. Scan for Mode and Model buttons based on DOM structure
+        // Discovery-based detection (more robust than tag-only)
+        const modeBtn = allBtns.find((btn) => {
+          const text = (btn.innerText || btn.textContent || "").trim();
+          // Exact matches for current mode labels
+          if (text === "Planning" || text === "Fast" || text === "Agent") {
+            // Ensure it's not the model button which might also contain these words in some contexts
+            // Mode buttons typically have no ID or a very generic one, whereas Model buttons often have headlessui IDs
+            return !btn.id || !btn.id.includes("headlessui");
+          }
+          return false;
+        });
+
+        const modelBtn = allBtns.find((btn) => {
+          if (btn === modeBtn) return false;
+          const id = btn.id || "";
+          const text = (btn.innerText || btn.textContent || "").trim();
+          // Model button usually has a headlessui ID and contains model-like keywords
+          const isModelId =
+            id.includes("headlessui-popover-button") ||
+            id.includes("headlessui-menu-button");
+          const hasModelText =
+            text.includes("Gemini") ||
+            text.includes("Claude") ||
+            text.includes("Pro") ||
+            text.includes("Sonnet") ||
+            text.includes("gpt");
+
+          return isModelId && hasModelText;
+        });
+
+        // 4. Update UI & Hide Legacy Buttons
+        let hideSelectors = [];
+
+        if (modeBtn) {
+          const text = (modeBtn.innerText || modeBtn.textContent || "").trim();
+          modeVal.textContent = text;
+          modeVal.style.color = "#3b82f6";
+          currentModeSelector = getUniqueSelector(modeBtn);
+          currentModeText = text;
+          nativeStatusBar.style.display = "flex";
+          hideSelectors.push(currentModeSelector);
+        }
+
+        if (modelBtn) {
+          const text = (
+            modelBtn.innerText ||
+            modelBtn.textContent ||
+            ""
+          ).trim();
+          modelVal.textContent = text;
+          currentModelSelector = getUniqueSelector(modelBtn);
+          currentModelText = text;
+          nativeStatusBar.style.display = "flex";
+          hideSelectors.push(currentModelSelector);
+        }
+
+        // Sync legacy hider style
+        let hiderStyle = document.getElementById("legacy-hider-style");
+        if (!hiderStyle) {
+          hiderStyle = document.createElement("style");
+          hiderStyle.id = "legacy-hider-style";
+          document.head.appendChild(hiderStyle);
+        }
+        if (hideSelectors.length > 0) {
+          hiderStyle.textContent = hideSelectors
+            .map(
+              (sel) =>
+                `${sel} { opacity: 0 !important; pointer-events: none !important; }`,
+            )
+            .join("\n");
+        }
+
+        // 3. Detect Open Panels (Popovers & Menus)
+        if (!pendingMenuClick) return;
+
+        const panelSelectors = [
+          '[id^="headlessui-popover-panel"]',
+          '[id^="headlessui-menu-items"]',
+          '[id^="headlessui-listbox-options"]',
+          '[role="menu"]',
+          '[role="listbox"]',
+          '[role="dialog"]', // ← Mode menu uses this!
+          '[class*="popover"]',
+          '[class*="menu"]',
+          ".fixed",
+          ".absolute",
+        ];
+
+        let bestPanel = null;
+        let bestItems = [];
+
+        for (const sel of panelSelectors) {
+          const panels = Array.from(temp.querySelectorAll(sel));
+          for (const p of panels) {
+            // Skip tiny or obviously wrong things
+            if (p.textContent.trim().length < 2) continue;
+
+            const itemSels = [
+              "button",
+              '[role="menuitem"]',
+              '[role="option"]',
+              "li",
+              ".cursor-pointer", // ← Mode menu items have this class!
+              "a",
+              "div.cursor-pointer", // ← Explicitly add div with cursor-pointer
+            ];
+            const foundItems = Array.from(
+              p.querySelectorAll(itemSels.join(", ")),
+            )
+              .map((item) => {
+                let text = (item.innerText || item.textContent || "")
+                  .replace(/\s+/g, " ")
+                  .trim();
+                // For Mode menu, extract just the title (first line)
+                if (item.querySelector(".font-medium")) {
+                  text = item.querySelector(".font-medium").textContent.trim();
+                }
+                return { text, selector: getUniqueSelector(item) };
+              })
+              .filter((it) => it.text.length > 0 && it.text.length < 100);
+
+            // Heuristic Filter: If we are looking for a specific type, ensure at least one item matches
+            let matchesType = true;
+            if (lastClickedType === "mode") {
+              const modeWords = [
+                "Planning",
+                "Fast",
+                "Agent",
+                "Ask",
+                "Execution",
+                "Edit",
+                "Chat",
+                "Writing",
+              ];
+              matchesType = foundItems.some((it) =>
+                modeWords.some((w) => it.text.includes(w)),
+              );
+            } else if (lastClickedType === "model") {
+              const modelWords = [
+                "Gemini",
+                "Claude",
+                "gpt",
+                "Sonnet",
+                "Pro",
+                "Flash",
+                "Haiku",
+                "Llama",
+              ];
+              matchesType = foundItems.some((it) =>
+                modelWords.some((w) =>
+                  it.text.toLowerCase().includes(w.toLowerCase()),
+                ),
+              );
+            }
+
+            if (matchesType && foundItems.length > bestItems.length) {
+              bestItems = foundItems;
+              bestPanel = p;
+            }
+          }
+        }
+
+        if (bestPanel && bestItems.length > 0) {
+          if (!optionsSheet.classList.contains("show")) {
+            showSheet("Select Option", bestItems);
+            pendingMenuClick = false;
+          }
+        }
+      }
+
+      // Initial Start
+      if (authToken) {
+        connectWebSocket();
+      } else {
+        showLogin();
+      }
+    </script>
+  </body>
 </html>

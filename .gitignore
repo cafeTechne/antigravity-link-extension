@@ -5,3 +5,4 @@ uploads/
 *.vsix
 *.log
 .DS_Store
+*.pem
