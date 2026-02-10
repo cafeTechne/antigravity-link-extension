@@ -1,5 +1,5 @@
-import { CDPConnection, Snapshot, InjectResult, ClickResult } from '../types';
-import { convertVsCodeIcons } from '../utils';
+import { CDPConnection, Snapshot, InjectResult, ClickResult } from "../types";
+import { convertVsCodeIcons } from "../utils";
 
 // Scripts
 const CAPTURE_SCRIPT = `(() => {
@@ -62,33 +62,46 @@ const CAPTURE_SCRIPT = `(() => {
 
 // Service Methods
 
-export async function captureSnapshot(cdp: CDPConnection): Promise<Snapshot | null> {
-    for (const ctx of cdp.contexts) {
-        try {
-            const result = await cdp.call("Runtime.evaluate", {
-                expression: CAPTURE_SCRIPT,
-                returnByValue: true,
-                contextId: ctx.id
-            });
+export async function captureSnapshot(
+  cdp: CDPConnection,
+): Promise<Snapshot | null> {
+  for (const ctx of cdp.contexts) {
+    try {
+      const result = await cdp.call("Runtime.evaluate", {
+        expression: CAPTURE_SCRIPT,
+        returnByValue: true,
+        contextId: ctx.id,
+      });
 
-            if (result.result?.value) {
-                const snapshot = result.result.value as Snapshot;
-                if (snapshot.error) continue;
+      if (result.result?.value) {
+        const snapshot = result.result.value as Snapshot;
+        if (snapshot.error) {
+          console.error(
+            `❌ [captureSnapshot] Snapshot internal error:`,
+            snapshot.error,
+          );
+          continue;
+        }
 
-                // Convert vscode-file:// icons to base64 in both HTML and CSS
-                snapshot.html = convertVsCodeIcons(snapshot.html);
-                snapshot.css = convertVsCodeIcons(snapshot.css);
-                return snapshot;
-            }
-        } catch { }
+        // Convert vscode-file:// icons to base64 in both HTML and CSS
+        snapshot.html = convertVsCodeIcons(snapshot.html);
+        snapshot.css = convertVsCodeIcons(snapshot.css);
+        return snapshot;
+      }
+    } catch (err) {
+      console.error(`❌ [captureSnapshot] ctx:${ctx.id} error:`, err);
     }
-    return null;
+  }
+  return null;
 }
 
-export async function injectMessage(cdp: CDPConnection, text: string): Promise<InjectResult> {
-    const safeText = JSON.stringify(text);
+export async function injectMessage(
+  cdp: CDPConnection,
+  text: string,
+): Promise<InjectResult> {
+  const safeText = JSON.stringify(text);
 
-    const EXPRESSION = `(async () => {
+  const EXPRESSION = `(async () => {
         // Find visible editor - Broad discovery
         const editorSelectors = [
             '#cascade [data-lexical-editor="true"][contenteditable="true"]',
@@ -150,44 +163,44 @@ export async function injectMessage(cdp: CDPConnection, text: string): Promise<I
         return { ok:true, method:"enter_keypress" };
     })()`;
 
-    let lastResult: InjectResult = { ok: false, reason: "no_context" };
+  let lastResult: InjectResult = { ok: false, reason: "no_context" };
 
-    for (const ctx of cdp.contexts) {
-        try {
-            const result = await cdp.call("Runtime.evaluate", {
-                expression: EXPRESSION,
-                returnByValue: true,
-                awaitPromise: true,
-                contextId: ctx.id
-            });
+  for (const ctx of cdp.contexts) {
+    try {
+      const result = await cdp.call("Runtime.evaluate", {
+        expression: EXPRESSION,
+        returnByValue: true,
+        awaitPromise: true,
+        contextId: ctx.id,
+      });
 
-            const injResult = result.result?.value as InjectResult | undefined;
+      const injResult = result.result?.value as InjectResult | undefined;
 
-            if (injResult) {
-                if (injResult.ok) return injResult;
-                lastResult = injResult;
-            }
-        } catch { }
-    }
+      if (injResult) {
+        if (injResult.ok) return injResult;
+        lastResult = injResult;
+      }
+    } catch {}
+  }
 
-    return lastResult;
+  return lastResult;
 }
 
 export async function clickElement(
-    cdp: CDPConnection,
-    text?: string,
-    tag?: string,
-    x?: number,
-    y?: number,
-    selector?: string
+  cdp: CDPConnection,
+  text?: string,
+  tag?: string,
+  x?: number,
+  y?: number,
+  selector?: string,
 ): Promise<ClickResult> {
-    // Smart Click Script
-    const CLICK_SCRIPT = `(() => {
-        const textToFind = ${JSON.stringify(text || '')};
-        const tagToFind = ${JSON.stringify(tag || '*')};
+  // Smart Click Script
+  const CLICK_SCRIPT = `(() => {
+        const textToFind = ${JSON.stringify(text || "")};
+        const tagToFind = ${JSON.stringify(tag || "*")};
         const targetX = ${JSON.stringify(x)};
         const targetY = ${JSON.stringify(y)};
-        const selectorToFind = ${JSON.stringify(selector || '')};
+        const selectorToFind = ${JSON.stringify(selector || "")};
         
         function isVisible(el) {
             const rect = el.getBoundingClientRect();
@@ -314,66 +327,79 @@ export async function clickElement(
         return { success: false, error: 'No element found' };
     })()`;
 
-    for (const ctx of cdp.contexts) {
-        try {
-            const result = await cdp.call("Runtime.evaluate", {
-                expression: CLICK_SCRIPT,
-                returnByValue: true,
-                awaitPromise: true,
-                contextId: ctx.id
-            });
+  for (const ctx of cdp.contexts) {
+    try {
+      const result = await cdp.call("Runtime.evaluate", {
+        expression: CLICK_SCRIPT,
+        returnByValue: true,
+        awaitPromise: true,
+        contextId: ctx.id,
+      });
 
-            const val = result.result?.value as ClickResult;
-            if (val && val.success) {
-                return val;
-            }
-        } catch (e) { }
-    }
+      const val = result.result?.value as ClickResult;
+      if (val && val.success) {
+        return val;
+      }
+    } catch (e) {}
+  }
 
-    return { success: false, reason: 'Could not find element' };
+  return { success: false, reason: "Could not find element" };
 }
 
 // Robust Strategy: UI Interaction + File Chooser Interception
-export async function injectFile(cdp: CDPConnection, filePath: string, targetSelector?: string): Promise<InjectResult> {
-    console.log(`[injectFile] Attempting injection for ${filePath} (selector: ${targetSelector || 'auto'})`);
+export async function injectFile(
+  cdp: CDPConnection,
+  filePath: string,
+  targetSelector?: string,
+): Promise<InjectResult> {
+  console.log(
+    `[injectFile] Attempting injection for ${filePath} (selector: ${targetSelector || "auto"})`,
+  );
 
-    try {
-        await cdp.call("Page.enable", {});
-        await cdp.call("DOM.enable", {});
-        await cdp.call("Page.setInterceptFileChooserDialog", { enabled: true });
+  try {
+    await cdp.call("Page.enable", {});
+    await cdp.call("DOM.enable", {});
+    await cdp.call("Page.setInterceptFileChooserDialog", { enabled: true });
 
-        // Try to locate a context with "Add context" UI
-        let targetCtxId: number | null = null;
+    // Try to locate a context with "Add context" UI
+    let targetCtxId: number | null = null;
 
-        for (const ctx of cdp.contexts) {
-            const res = await cdp.call("Runtime.evaluate", {
-                expression: `(() => {
+    for (const ctx of cdp.contexts) {
+      const res = await cdp.call("Runtime.evaluate", {
+        expression: `(() => {
                     const btn = Array.from(document.querySelectorAll('div, button')).find(el => (el.innerText || '').toLowerCase().includes('add context'));
                     return !!btn;
                 })()`,
-                contextId: ctx.id,
-                returnByValue: true
-            });
-            if (res.result?.value) {
-                targetCtxId = ctx.id;
-                break;
-            }
-        }
+        contextId: ctx.id,
+        returnByValue: true,
+      });
+      if (res.result?.value) {
+        targetCtxId = ctx.id;
+        break;
+      }
+    }
 
-        // Fallback: if we didn't find the UI, try direct file input in any context
-        if (!targetCtxId) {
-            for (const ctx of cdp.contexts) {
-                const direct = await tryDirectInputInjection(cdp, ctx.id, filePath, targetSelector);
-                if (direct.ok) return direct;
-            }
-            return { ok: false, reason: 'ui_not_found' };
-        }
+    // Fallback: if we didn't find the UI, try direct file input in any context
+    if (!targetCtxId) {
+      for (const ctx of cdp.contexts) {
+        const direct = await tryDirectInputInjection(
+          cdp,
+          ctx.id,
+          filePath,
+          targetSelector,
+        );
+        if (direct.ok) return direct;
+      }
+      return { ok: false, reason: "ui_not_found" };
+    }
 
-        console.log(`   [ctx:${targetCtxId}] Found UI context. Initiating click sequence...`);
+    console.log(
+      `   [ctx:${targetCtxId}] Found UI context. Initiating click sequence...`,
+    );
 
-        // Execute Click Sequence
-        const interactionResult = await cdp.call("Runtime.evaluate", {
-            expression: `(async () => {
+    // Execute Click Sequence
+    const interactionResult = await cdp.call("Runtime.evaluate", {
+      expression: `(async () => {
                 try {
                     const buttons = Array.from(document.querySelectorAll('div, button'));
                     const addContextBtn = buttons.find(el => (el.innerText || '').includes('Add context'));
@@ -392,16 +418,18 @@ export async function injectFile(cdp: CDPConnection, filePath: string, targetSel
                     return 'media_not_found';
                 } catch(e) { return e.toString(); }
             })()`,
-            contextId: targetCtxId,
-            awaitPromise: true
-        });
-        console.log(`   UI Click sequence result: ${interactionResult.result?.value}`);
+      contextId: targetCtxId,
+      awaitPromise: true,
+    });
+    console.log(
+      `   UI Click sequence result: ${interactionResult.result?.value}`,
+    );
 
-        // Try to find the file input with retries (menu animation latency)
-        for (let attempt = 0; attempt < 5; attempt++) {
-            const findInputRes = await cdp.call("Runtime.evaluate", {
-                expression: `(() => {
-                     const selector = ${JSON.stringify(targetSelector || '')};
+    // Try to find the file input with retries (menu animation latency)
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const findInputRes = await cdp.call("Runtime.evaluate", {
+        expression: `(() => {
+                     const selector = ${JSON.stringify(targetSelector || "")};
                      let input = null;
                      if (selector) {
                         try { input = document.querySelector(selector); } catch(e) {}
@@ -412,65 +440,77 @@ export async function injectFile(cdp: CDPConnection, filePath: string, targetSel
                      }
                      return input ? (input.dataset.agId = 'ag-' + Date.now()) : null;
                  })()`,
-                contextId: targetCtxId,
-                returnByValue: true
-            });
+        contextId: targetCtxId,
+        returnByValue: true,
+      });
 
-            const uid = findInputRes.result?.value;
-            if (uid) {
-                const ret = await cdp.call("Runtime.evaluate", {
-                    expression: `document.querySelector('[data-ag-id="${uid}"]')`,
-                    contextId: targetCtxId
-                });
+      const uid = findInputRes.result?.value;
+      if (uid) {
+        const ret = await cdp.call("Runtime.evaluate", {
+          expression: `document.querySelector('[data-ag-id="${uid}"]')`,
+          contextId: targetCtxId,
+        });
 
-                if (ret.result && ret.result.objectId) {
-                    const ok = await setFilesAndDispatch(cdp, ret.result.objectId, filePath);
-                    if (ok) return { ok: true, method: 'ui_interaction_injection' };
-                }
-            }
-
-            await new Promise(r => setTimeout(r, 200));
+        if (ret.result && ret.result.objectId) {
+          const ok = await setFilesAndDispatch(
+            cdp,
+            ret.result.objectId,
+            filePath,
+          );
+          if (ok) return { ok: true, method: "ui_interaction_injection" };
         }
+      }
 
-        // Last resort: try direct input injection in all contexts
-        for (const ctx of cdp.contexts) {
-            const direct = await tryDirectInputInjection(cdp, ctx.id, filePath, targetSelector);
-            if (direct.ok) return direct;
-        }
-
-        return { ok: false, reason: 'input_not_invokable' };
-
-    } catch (e) {
-        console.log('Injection failed:', (e as Error).message);
+      await new Promise((r) => setTimeout(r, 200));
     }
 
-    return { ok: false, reason: 'injection_error' };
+    // Last resort: try direct input injection in all contexts
+    for (const ctx of cdp.contexts) {
+      const direct = await tryDirectInputInjection(
+        cdp,
+        ctx.id,
+        filePath,
+        targetSelector,
+      );
+      if (direct.ok) return direct;
+    }
+
+    return { ok: false, reason: "input_not_invokable" };
+  } catch (e) {
+    console.log("Injection failed:", (e as Error).message);
+  }
+
+  return { ok: false, reason: "injection_error" };
 }
 
-async function setFilesAndDispatch(cdp: CDPConnection, objectId: string, filePath: string): Promise<boolean> {
-    await cdp.call("DOM.setFileInputFiles", { files: [filePath], objectId });
-    await cdp.call("Runtime.callFunctionOn", {
-        objectId,
-        functionDeclaration: `function() {
+async function setFilesAndDispatch(
+  cdp: CDPConnection,
+  objectId: string,
+  filePath: string,
+): Promise<boolean> {
+  await cdp.call("DOM.setFileInputFiles", { files: [filePath], objectId });
+  await cdp.call("Runtime.callFunctionOn", {
+    objectId,
+    functionDeclaration: `function() {
              const tracker = this._valueTracker;
              if (tracker) tracker.setValue('');
              this.dispatchEvent(new Event('input', { bubbles: true }));
              this.dispatchEvent(new Event('change', { bubbles: true }));
-         }`
-    });
-    return true;
+         }`,
+  });
+  return true;
 }
 
 async function tryDirectInputInjection(
-    cdp: CDPConnection,
-    contextId: number,
-    filePath: string,
-    targetSelector?: string
+  cdp: CDPConnection,
+  contextId: number,
+  filePath: string,
+  targetSelector?: string,
 ): Promise<InjectResult> {
-    try {
-        const res = await cdp.call("Runtime.evaluate", {
-            expression: `(() => {
-                const selector = ${JSON.stringify(targetSelector || '')};
+  try {
+    const res = await cdp.call("Runtime.evaluate", {
+      expression: `(() => {
+                const selector = ${JSON.stringify(targetSelector || "")};
                 let input = null;
                 if (selector) {
                     try { input = document.querySelector(selector); } catch(e) {}
@@ -482,31 +522,31 @@ async function tryDirectInputInjection(
                 }
                 return input ? (input.dataset.agId = 'ag-' + Date.now()) : null;
             })()`,
-            contextId,
-            returnByValue: true
-        });
+      contextId,
+      returnByValue: true,
+    });
 
-        const uid = res.result?.value;
-        if (!uid) return { ok: false, reason: 'input_not_found' };
+    const uid = res.result?.value;
+    if (!uid) return { ok: false, reason: "input_not_found" };
 
-        const ret = await cdp.call("Runtime.evaluate", {
-            expression: `document.querySelector('[data-ag-id="${uid}"]')`,
-            contextId
-        });
+    const ret = await cdp.call("Runtime.evaluate", {
+      expression: `document.querySelector('[data-ag-id="${uid}"]')`,
+      contextId,
+    });
 
-        if (ret.result && ret.result.objectId) {
-            await setFilesAndDispatch(cdp, ret.result.objectId, filePath);
-            return { ok: true, method: 'direct_input_injection' };
-        }
-
-        return { ok: false, reason: 'input_not_invokable' };
-    } catch {
-        return { ok: false, reason: 'input_not_invokable' };
+    if (ret.result && ret.result.objectId) {
+      await setFilesAndDispatch(cdp, ret.result.objectId, filePath);
+      return { ok: true, method: "direct_input_injection" };
     }
+
+    return { ok: false, reason: "input_not_invokable" };
+  } catch {
+    return { ok: false, reason: "input_not_invokable" };
+  }
 }
 
 export async function probeVSCode(cdp: CDPConnection): Promise<any> {
-    const PROBE_SCRIPT = `(async () => {
+  const PROBE_SCRIPT = `(async () => {
         const results = {
             vscode: typeof vscode !== 'undefined',
             ipcKeys: []
@@ -519,19 +559,19 @@ export async function probeVSCode(cdp: CDPConnection): Promise<any> {
         return results;
     })()`;
 
-    const allProbes: any[] = [];
-    for (const ctx of cdp.contexts) {
-        try {
-            const result = await cdp.call("Runtime.evaluate", {
-                expression: PROBE_SCRIPT,
-                returnByValue: true,
-                awaitPromise: true,
-                contextId: ctx.id
-            });
-            allProbes.push({ contextId: ctx.id, data: result.result?.value });
-        } catch (e) {
-            allProbes.push({ contextId: ctx.id, error: (e as Error).message });
-        }
+  const allProbes: any[] = [];
+  for (const ctx of cdp.contexts) {
+    try {
+      const result = await cdp.call("Runtime.evaluate", {
+        expression: PROBE_SCRIPT,
+        returnByValue: true,
+        awaitPromise: true,
+        contextId: ctx.id,
+      });
+      allProbes.push({ contextId: ctx.id, data: result.result?.value });
+    } catch (e) {
+      allProbes.push({ contextId: ctx.id, error: (e as Error).message });
     }
-    return { target: cdp.title, probes: allProbes };
+  }
+  return { target: cdp.title, probes: allProbes };
 }

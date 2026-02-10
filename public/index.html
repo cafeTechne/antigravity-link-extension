@@ -1180,7 +1180,6 @@
           logToScreen("WebSocket Connected", "#4ade80");
           updateConnectionUI("ws");
 
-          const loader = document.querySelector(".loading span");
           if (loader) loader.textContent = "Authenticating...";
 
           // Auto-connect / Wake-up Logic
@@ -1210,6 +1209,15 @@
               if (!userIsScrolling) {
                 renderSnapshot(msg.data);
                 updateControls(msg.data.controlsHtml || msg.data.html);
+              }
+            } else if (msg.type === "status") {
+              logToScreen(`Status Update: ${msg.status}`, "#4ade80");
+              const loader = document.querySelector(".loading span");
+              if (msg.status === "connected") {
+                if (loader) loader.textContent = "Connected! Waiting for screen...";
+              } else if (msg.status === "error") {
+                if (loader) loader.textContent = `Error: ${msg.message || "Unknown error"}`;
+                logToScreen(`Server Error: ${msg.message}`, "#f87171");
               }
             }
           } catch (e) {
