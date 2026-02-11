@@ -1,5 +1,6 @@
 import { CDPConnection, Snapshot, InjectResult, ClickResult } from '../types';
 import { convertVsCodeIcons } from '../utils';
+import util from 'util';
 
 // Scripts
 const CAPTURE_SCRIPT = `(() => {
@@ -22,7 +23,7 @@ const CAPTURE_SCRIPT = `(() => {
             const clone = cascade.cloneNode(true);
             const input = clone.querySelector('[contenteditable="true"]')?.closest('div[id^="cascade"] > div');
             if (input) input.remove();
-            cleanHtml = (clone as HTMLElement).outerHTML;
+            cleanHtml = clone.outerHTML;
         } else {
             cleanHtml = document.body.outerHTML;
         }
@@ -56,14 +57,86 @@ const CAPTURE_SCRIPT = `(() => {
             bodyColor: bodyStyles.color
         };
     } catch (e) {
-        return { error: e.toString() };
+        const err = (() => {
+            try {
+                const anyErr = e && typeof e === 'object' ? e : {};
+                return {
+                    name: anyErr && anyErr.name ? String(anyErr.name) : undefined,
+                    message: anyErr && anyErr.message ? String(anyErr.message) : undefined,
+                    stack: anyErr && anyErr.stack ? String(anyErr.stack) : undefined,
+                    toString: String(e)
+                };
+            } catch {
+                return { toString: 'error serializing error' };
+            }
+        })();
+        return { error: err };
     }
 })()`;
 
 // Service Methods
 
-export async function captureSnapshot(cdp: CDPConnection): Promise<Snapshot | null> {
+type SnapshotDebugContext = {
+    id: number;
+    exceptionDetails?: {
+        text?: string;
+        lineNumber?: number;
+        columnNumber?: number;
+        exception?: {
+            type?: string;
+            subtype?: string;
+            description?: string;
+            value?: string;
+        };
+    };
+    result?: {
+        type?: string;
+        subtype?: string;
+        description?: string;
+        hasValue?: boolean;
+        valueType?: string;
+    };
+    error?: string;
+};
+
+type SnapshotDebugResult = { snapshot?: Snapshot; errors: string[]; contexts: SnapshotDebugContext[] };
+
+function stringifyValue(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    try {
+        const seen = new Set();
+        return JSON.stringify(value, (_key, val) => {
+            if (typeof val === 'object' && val !== null) {
+                if (seen.has(val)) return '[Circular]';
+                seen.add(val);
+            }
+            return val;
+        });
+    } catch {
+        try {
+            return util.inspect(value, { depth: 3, breakLength: 120 });
+        } catch {
+            return String(value);
+        }
+    }
+}
+
+function formatException(details: any): string {
+    if (!details) return 'unknown exception';
+    const text = stringifyValue(details.text || details.exception?.description || details.exception?.value);
+    const line = typeof details.lineNumber === 'number' ? ` line ${details.lineNumber}` : '';
+    const col = typeof details.columnNumber === 'number' ? ` col ${details.columnNumber}` : '';
+    return `${text || 'exception'}${line}${col}`.trim();
+}
+
+async function captureSnapshotInternal(cdp: CDPConnection): Promise<SnapshotDebugResult> {
+    const errors: string[] = [];
+    const contexts: SnapshotDebugContext[] = [];
+
     for (const ctx of cdp.contexts) {
+        const ctxDiag: SnapshotDebugContext = { id: ctx.id };
         try {
             const result = await cdp.call("Runtime.evaluate", {
                 expression: CAPTURE_SCRIPT,
@@ -71,18 +144,101 @@ export async function captureSnapshot(cdp: CDPConnection): Promise<Snapshot | nu
                 contextId: ctx.id
             });
 
+            const exceptionDetails = (result as any)?.exceptionDetails;
+            if (exceptionDetails) {
+                ctxDiag.exceptionDetails = {
+                    text: exceptionDetails.text,
+                    lineNumber: exceptionDetails.lineNumber,
+                    columnNumber: exceptionDetails.columnNumber,
+                    exception: exceptionDetails.exception ? {
+                        type: exceptionDetails.exception.type,
+                        subtype: exceptionDetails.exception.subtype,
+                        description: exceptionDetails.exception.description,
+                        value: stringifyValue(exceptionDetails.exception.value)
+                    } : undefined
+                };
+                errors.push(`ctx ${ctx.id}: ${formatException(exceptionDetails)}`);
+                contexts.push(ctxDiag);
+                continue;
+            }
+
             if (result.result?.value) {
                 const snapshot = result.result.value as Snapshot;
-                if (snapshot.error) continue;
+                if (snapshot.error) {
+                    ctxDiag.error = stringifyValue(snapshot.error);
+                    errors.push(`ctx ${ctx.id}: ${stringifyValue(snapshot.error)}`);
+                    contexts.push(ctxDiag);
+                    continue;
+                }
 
                 // Convert vscode-file:// icons to base64 in both HTML and CSS
                 snapshot.html = convertVsCodeIcons(snapshot.html);
                 snapshot.css = convertVsCodeIcons(snapshot.css);
-                return snapshot;
+                contexts.push(ctxDiag);
+                return { snapshot, errors, contexts };
             }
-        } catch { }
+
+            if (result.result) {
+                const type = (result.result as any).type || 'unknown';
+                const subtype = (result.result as any).subtype || '';
+                const desc = (result.result as any).description || '';
+                ctxDiag.result = {
+                    type,
+                    subtype,
+                    description: desc,
+                    hasValue: Object.prototype.hasOwnProperty.call(result.result, 'value'),
+                    valueType: typeof (result.result as any).value
+                };
+                const meta = [type, subtype].filter(Boolean).join('/');
+                errors.push(`ctx ${ctx.id}: empty result (${meta || 'n/a'}${desc ? ` - ${desc}` : ''})`);
+            } else {
+                errors.push(`ctx ${ctx.id}: empty result (no result object)`);
+            }
+        } catch (err) {
+            const message = err instanceof Error ? err.message : stringifyValue(err);
+            ctxDiag.error = message;
+            errors.push(`ctx ${ctx.id}: ${message}`);
+        } finally {
+            contexts.push(ctxDiag);
+        }
     }
-    return null;
+
+    // Fallback: try main world without contextId
+    try {
+        const result = await cdp.call("Runtime.evaluate", {
+            expression: CAPTURE_SCRIPT,
+            returnByValue: true
+        });
+
+        const exceptionDetails = (result as any)?.exceptionDetails;
+        if (exceptionDetails) {
+            errors.push(`default context: ${formatException(exceptionDetails)}`);
+        } else if (result.result?.value) {
+            const snapshot = result.result.value as Snapshot;
+            if (!snapshot.error) {
+                snapshot.html = convertVsCodeIcons(snapshot.html);
+                snapshot.css = convertVsCodeIcons(snapshot.css);
+                return { snapshot, errors, contexts };
+            }
+            errors.push(`default context: ${stringifyValue(snapshot.error)}`);
+        } else {
+            errors.push('default context: empty result');
+        }
+    } catch (err) {
+        const message = err instanceof Error ? err.message : stringifyValue(err);
+        errors.push(`default context: ${message}`);
+    }
+
+    return { errors, contexts };
+}
+
+export async function captureSnapshot(cdp: CDPConnection): Promise<Snapshot | null> {
+    const { snapshot } = await captureSnapshotInternal(cdp);
+    return snapshot ?? null;
+}
+
+export async function captureSnapshotDebug(cdp: CDPConnection): Promise<SnapshotDebugResult> {
+    return captureSnapshotInternal(cdp);
 }
 
 export async function injectMessage(cdp: CDPConnection, text: string): Promise<InjectResult> {

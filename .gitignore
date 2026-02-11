@@ -2,6 +2,8 @@ node_modules/
 out/
 uploads/
 .token
+cert.pem
+key.pem
 *.vsix
 *.log
 .DS_Store

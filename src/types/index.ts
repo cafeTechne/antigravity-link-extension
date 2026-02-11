@@ -61,7 +61,7 @@ export interface Snapshot {
     colorScheme: string;
     bodyBg: string;
     bodyColor: string;
-    error?: string;
+    error?: unknown;
 }
 
 export interface ClickResult {

@@ -7,7 +7,7 @@ import os from 'os';
 import selfsigned from 'selfsigned';
 import { WebSocketServer, WebSocket } from 'ws';
 import { discoverInstances, connectCDP } from '../services/cdp';
-import { injectFile, injectMessage, captureSnapshot, clickElement } from '../services/antigravity';
+import { injectFile, injectMessage, captureSnapshot, captureSnapshotDebug, clickElement } from '../services/antigravity';
 import { CDPConnection, Snapshot } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { securityMiddleware } from '../middleware/security';
@@ -427,6 +427,31 @@ export class AntigravityServer {
                     allResults.push({ target: cdp.title, url: cdp.url, contexts: targetResults });
                 }
                 res.json({ success: true, targets: allResults });
+            } catch (e) {
+                res.status(500).json({ error: (e as Error).message });
+            }
+        });
+
+        // Debug: snapshot capture diagnostics
+        router.get('/debug/capture', async (_req, res) => {
+            if (this.state.cdpConnections.length === 0) return res.status(503).json({ error: 'CDP not connected' });
+
+            const cdp = this.state.activeTargetId
+                ? this.state.cdpConnections.find(c => c.id === this.state.activeTargetId)
+                : this.state.cdpConnections[0];
+            if (!cdp) return res.status(503).json({ error: 'CDP not connected' });
+
+            try {
+                const result = await captureSnapshotDebug(cdp);
+                res.json({
+                    debugVersion: 'capture-v7',
+                    target: cdp.title,
+                    url: cdp.url,
+                    contextCount: cdp.contexts.length,
+                    errors: result.errors,
+                    contexts: result.contexts,
+                    snapshotOk: !!result.snapshot
+                });
             } catch (e) {
                 res.status(500).json({ error: (e as Error).message });
             }

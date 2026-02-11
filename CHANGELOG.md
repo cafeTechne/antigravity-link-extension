@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.11
+
+- Fix: Resolved `SyntaxError` in snapshot capture script affecting connection.
+- Fix: Improved error handling and diagnostics for mobile bridge.
+- Fix: Ensure correct discovery of Antigravity UI targets.
+
 ## 1.0.10
 
 - Fix: Resilient DOM selectors for message injection (fixes broken chat in Google update).
