@@ -731,7 +731,24 @@
                 }
 
                 ${hoistedCss}
-
+                /* ── Force mobile viewport compliance ── */
+                #mirrorContent,
+                #mirrorContent > * {
+                    max-width: 100% !important;
+                    min-width: 0 !important;
+                    overflow-x: hidden !important;
+                }
+                #mirrorContent * {
+                    max-width: 100% !important;
+                    min-width: 0 !important;
+                    word-break: break-word !important;
+                    overflow-wrap: break-word !important;
+                }
+                #mirrorContent pre,
+                #mirrorContent code {
+                    overflow-x: auto !important;
+                    overflow-wrap: anywhere !important;
+                }
                 /* ── Skeleton loading placeholders ───────────────────────────────────────
                    Antigravity virtualises old messages out of the viewport and replaces them
                    with sized gray boxes (class bg-gray-500/10, inline height).  In the mirror
