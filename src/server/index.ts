@@ -8,9 +8,11 @@ import selfsigned from 'selfsigned';
 import { WebSocketServer, WebSocket } from 'ws';
 import { discoverInstances, connectCDP } from '../services/cdp';
 import { injectFile, injectMessage, captureSnapshot, captureSnapshotDebug, clickElement } from '../services/antigravity';
+import { getLsConnection, invalidateLsCache, cancelCascadeInvocation } from '../services/ls-discovery';
 import { CDPConnection, Snapshot, CDPInfo } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { securityMiddleware } from '../middleware/security';
+import { IsGeneratingTracker } from './isGeneratingTracker';
 
 // Config defaults (aligned with root server)
 const MAX_UPLOAD_SIZE_MB = 50;
@@ -33,6 +35,7 @@ interface State {
     missedSnapshots: number;
     reinitInProgress: boolean;
     lastCdpInitAttemptAt: number;
+    lastBroadcastIsGenerating: boolean;
 }
 
 export class AntigravityServer {
@@ -42,6 +45,7 @@ export class AntigravityServer {
     private uploadsDir: string;
     private publicDir: string;
     private extensionPath: string;
+    private workspaceRoot: string;
     private port: number;
     private useHttps: boolean;
     private preferredHost: string;
@@ -51,14 +55,21 @@ export class AntigravityServer {
     private state: State;
     private useAuth: boolean;
 
-    constructor(port: number, extensionPath: string, workspaceRoot?: string, useHttps = true, preferredHost = '') {
+    private primarySendFn: ((msg: string) => Promise<boolean>) | null = null;
+    private getActiveCascadeIdFn: (() => Promise<string>) | null = null;
+    private isGeneratingTracker = new IsGeneratingTracker(10_000);
+
+    constructor(port: number, extensionPath: string, workspaceRoot?: string, useHttps = true, preferredHost = '', primarySendFn?: (message: string) => Promise<boolean>, getActiveCascadeIdFn?: () => Promise<string>) {
         this.port = port;
         this.useHttps = useHttps;
         this.preferredHost = preferredHost.trim();
+        this.primarySendFn = primarySendFn || null;
+        this.getActiveCascadeIdFn = getActiveCascadeIdFn || null;
         this.extensionPath = extensionPath;
         this.app = express();
         // Prefer workspace root uploads/public (matches npm run dev), fall back to extension path
         const rootBase = workspaceRoot || process.cwd();
+        this.workspaceRoot = rootBase;
         const rootUploads = path.join(rootBase, 'uploads');
         const rootPublic = path.join(rootBase, 'public');
         this.uploadsDir = fs.existsSync(rootUploads) ? rootUploads : path.join(extensionPath, 'uploads');
@@ -74,7 +85,8 @@ export class AntigravityServer {
             pollInterval: null,
             missedSnapshots: 0,
             reinitInProgress: false,
-            lastCdpInitAttemptAt: 0
+            lastCdpInitAttemptAt: 0,
+            lastBroadcastIsGenerating: false
         };
         this.useAuth = true;
         this.authToken = this.loadOrCreateToken(extensionPath);
@@ -278,6 +290,9 @@ export class AntigravityServer {
         this.state.cdpConnections = [];
         this.state.activeTargetId = null;
         this.state.activePort = null;
+        // Reset generation tracking so stale hash state doesn't produce false positives
+        this.isGeneratingTracker.reset();
+        this.state.lastBroadcastIsGenerating = false;
 
         // User explicitly selected a target: honor it first and keep it if it connects.
         if (targetId && chosen) {
@@ -365,13 +380,41 @@ export class AntigravityServer {
                     return false;
                 }
                 const hash = this.hashString(snapshot.html);
+                const wasGenerating = this.state.lastBroadcastIsGenerating;
+                // Combine DOM-based signal (stop button in DOM, composer disabled, etc.)
+                // with hash-based signal (streaming content changes).  DOM is immediate;
+                // hash catches cases where the stop button isn't visible but text is changing.
+                const domIsGenerating = !!(snapshot as any).isGenerating;
+                // If DOM says generation just ended, reset the hash tracker NOW so the
+                // stop chip clears this poll instead of waiting up to 10 s for the window.
+                if (!domIsGenerating && wasGenerating) this.isGeneratingTracker.reset();
+                const hashIsGenerating = this.isGeneratingTracker.update(hash);
+                const isGenerating = domIsGenerating || hashIsGenerating;
+                (snapshot as any).isGenerating = isGenerating;
+
+                // When generation first starts, capture button inventory for stop-button debugging.
+                if (!wasGenerating && isGenerating) {
+                    this.captureStopProbe(cdp).catch(() => { /* best-effort */ });
+                }
+
                 if (hash !== this.state.lastSnapshotHash) {
+                    // HTML changed — normal broadcast path
                     this.state.lastSnapshot = snapshot;
                     this.state.lastSnapshotHash = hash;
                     this.state.missedSnapshots = 0;
+                    this.state.lastBroadcastIsGenerating = isGenerating;
                     if (this.state.activePort) this.state.snapshotCache.set(this.state.activePort, snapshot);
                     this.broadcastSnapshot(snapshot);
                     return true;
+                }
+
+                // HTML unchanged but isGenerating flipped — push update so client stops showing stop UI
+                if (isGenerating !== this.state.lastBroadcastIsGenerating) {
+                    this.state.lastBroadcastIsGenerating = isGenerating;
+                    if (this.state.lastSnapshot) {
+                        (this.state.lastSnapshot as any).isGenerating = isGenerating;
+                        this.broadcastSnapshot(this.state.lastSnapshot);
+                    }
                 }
                 this.state.missedSnapshots = 0;
                 return false;
@@ -410,6 +453,71 @@ export class AntigravityServer {
                 client.send(message);
             }
         });
+    }
+
+    /**
+     * Runs when isGenerating first flips true.  Captures a full button inventory
+     * from the main VS Code frame (no contextId) and saves to ag-stop-probe.json
+     * so we can see exactly what the Cancel/Stop button looks like in the live DOM.
+     */
+    private async captureStopProbe(cdp: CDPConnection): Promise<void> {
+        // Runs in ALL contexts (main world + every sub-frame) when generation first starts.
+        // Captures a full button inventory so we can identify the Cancel button's attributes.
+        const PROBE = `(() => {
+            try {
+                const norm = (s) => String(s || '').replace(/\\s+/g, ' ').trim();
+                const btnData = (b) => {
+                    const r = b.getBoundingClientRect();
+                    return {
+                        aria: norm(b.getAttribute('aria-label') || ''),
+                        title: norm(b.getAttribute('title') || ''),
+                        cls: (b.className || '').toString().slice(0, 100),
+                        text: norm(b.textContent || '').slice(0, 60),
+                        innerHTML: b.innerHTML.replace(/\\s+/g, ' ').slice(0, 200),
+                        hasSvg: !!b.querySelector('svg'),
+                        dataAttrs: Object.fromEntries(
+                            Array.from(b.attributes)
+                                .filter(a => a.name.startsWith('data-'))
+                                .map(a => [a.name, a.value.slice(0, 40)])
+                        ),
+                        visible: r.width > 0 && r.height > 0,
+                        rect: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) }
+                    };
+                };
+                const allBtns = Array.from(document.querySelectorAll('button,[role="button"]'));
+                // Priority: dump the input box buttons in full (these contain the cancel button)
+                const inputBox = document.querySelector('#antigravity\\\\.agentSidePanelInputBox') ||
+                                 document.querySelector('[id*="SidePanel"][id*="Input"]');
+                const inputBoxBtns = inputBox
+                    ? Array.from(inputBox.querySelectorAll('button,[role="button"]')).map(btnData)
+                    : null;
+                return {
+                    frameUrl: window.location.href,
+                    totalBtns: allBtns.length,
+                    inputBoxFound: !!inputBox,
+                    inputBoxBtns,
+                    buttons: allBtns.slice(0, 40).map(btnData)
+                };
+            } catch(e) { return { error: String(e) }; }
+        })()`;
+
+        try {
+            const allContextIds: Array<number | null> = [null, ...cdp.contexts.map(c => c.id)];
+            const contextResults: object[] = [];
+            for (const ctxId of allContextIds) {
+                try {
+                    const params: Record<string, unknown> = { expression: PROBE, returnByValue: true };
+                    if (ctxId !== null) params.contextId = ctxId;
+                    const result = await cdp.call("Runtime.evaluate", params);
+                    const val = result?.result?.value;
+                    if (val) contextResults.push({ ctxId: ctxId ?? 'main', ...val });
+                } catch { /* skip failed context */ }
+            }
+            const out = { ts: new Date().toISOString(), source: 'auto-on-generation-start', contexts: contextResults };
+            fs.writeFileSync(path.join(this.workspaceRoot, 'ag-stop-probe.json'), JSON.stringify(out, null, 2));
+            const totalBtns = contextResults.reduce((s, c: any) => s + (c.totalBtns || 0), 0);
+            console.log('[STOP-PROBE] saved', contextResults.length, 'contexts,', totalBtns, 'total buttons to ag-stop-probe.json');
+        } catch { /* best-effort — never throws to caller */ }
     }
 
     private hashString(input: string): string {
@@ -453,6 +561,10 @@ export class AntigravityServer {
             if (lname.includes('wi-fi') || lname.includes('wireless')) score += 5;
             if (lname.includes('ethernet') || /^en\d+$/i.test(c.name) || /^eth\d+$/i.test(c.name)) score += 4;
             if (lname.includes('virtual') || lname.includes('vbox') || lname.includes('wsl') || lname.includes('vpn') || lname.includes('tailscale')) score -= 15;
+            if (lname.includes('vethernet') || lname.includes('hyper-v') || lname.includes('docker')) score -= 20;
+            // Filter out APIPA (169.254.x.x) and Docker bridge (172.17.x.x) ranges
+            if (c.addr.startsWith('169.254.')) score -= 30;
+            if (c.addr.startsWith('172.17.') || c.addr.startsWith('172.18.') || c.addr.startsWith('172.19.')) score -= 20;
             return { ...c, score };
         }).sort((a, b) => b.score - a.score);
 
@@ -572,6 +684,16 @@ export class AntigravityServer {
         router.post('/send', async (req, res) => {
             const { message } = req.body as { message?: string };
             if (!message) return res.status(400).json({ error: 'Message required' });
+
+            // Try VS Code command injection first (more reliable than CDP DOM injection)
+            if (this.primarySendFn) {
+                try {
+                    const ok = await this.primarySendFn(message);
+                    if (ok) return res.json({ success: true, method: 'vscode_command', target: 'antigravity' });
+                } catch { /* fall through to CDP */ }
+            }
+
+            // Fall back to CDP DOM injection
             const cdp = this.state.activeTargetId
                 ? this.state.cdpConnections.find(c => c.id === this.state.activeTargetId)
                 : this.state.cdpConnections[0];
@@ -604,6 +726,140 @@ export class AntigravityServer {
             } catch (e) {
                 res.status(500).json({ error: (e as Error).message });
             }
+        });
+
+        router.post('/stop', async (_req, res) => {
+            const stopLog: Record<string, unknown> = { ts: new Date().toISOString() };
+
+            // Step 1: LS RPC CancelCascadeInvocation
+            // getActiveCascadeIdFromLs() queries the LS directly — no VS Code command needed.
+            let cascadeId = '';
+            let lsConn: import('../services/ls-discovery').LsConnection | null = null;
+            try {
+                lsConn = await getLsConnection();
+                stopLog.lsConn = lsConn ? { port: lsConn.port, useTls: lsConn.useTls } : null;
+                if (this.getActiveCascadeIdFn) {
+                    cascadeId = await this.getActiveCascadeIdFn();
+                }
+            } catch (err) {
+                stopLog.cascadeIdError = (err as Error).message;
+            }
+            stopLog.cascadeId = cascadeId;
+
+            let rpcOk = false;
+            let rpcResult: { ok: boolean; status?: number; body?: string } | null = null;
+            if (cascadeId && lsConn) {
+                try {
+                    rpcResult = await cancelCascadeInvocation(cascadeId, lsConn);
+                    if (!rpcResult.ok && rpcResult.status === 401) {
+                        invalidateLsCache();
+                        const conn2 = await getLsConnection();
+                        if (conn2) {
+                            rpcResult = await cancelCascadeInvocation(cascadeId, conn2);
+                            rpcOk = rpcResult.ok;
+                        }
+                    } else {
+                        rpcOk = rpcResult.ok;
+                    }
+                } catch (err) {
+                    stopLog.rpcError = (err as Error).message;
+                    invalidateLsCache();
+                }
+            }
+            stopLog.rpcResult = rpcResult;
+            stopLog.rpcOk = rpcOk;
+
+            // Step 1.5: Use the stop-button selector cached by the last snapshot poll.
+            // collectControls() already located this selector with full aria+text heuristics.
+            // This is the most reliable path — skip the heavier search if we have it.
+            const cdpForStop = this.state.activeTargetId
+                ? this.state.cdpConnections.find(c => c.id === this.state.activeTargetId)
+                : this.state.cdpConnections[0];
+
+            if (cdpForStop) {
+                const cachedSel = this.state.lastSnapshot?.controlsMeta?.stop?.selector;
+                if (cachedSel) {
+                    try {
+                        const selJson = JSON.stringify(cachedSel);
+                        const expr = `(() => {
+                            try {
+                                const el = document.querySelector(${selJson});
+                                if (el) { el.click(); return { found: true, method: 'cached-selector' }; }
+                                return { found: false, reason: 'selector-not-found' };
+                            } catch(e) { return { found: false, error: String(e) }; }
+                        })()`;
+                        const result = await cdpForStop.call("Runtime.evaluate", { expression: expr, returnByValue: true });
+                        if (result?.result?.value?.found) {
+                            console.log('[STOP] clicked via cached selector:', cachedSel);
+                            rpcOk = true;
+                        } else {
+                            console.log('[STOP] cached selector missed, falling through to heuristic search');
+                        }
+                    } catch (err) {
+                        console.log('[STOP] cached selector error:', (err as Error).message);
+                    }
+                }
+            }
+
+            // Step 2: DOM click — always run this regardless of RPC result.
+            // The LS RPC returns 200/{} (empty body) when the cascade ID is wrong — a silent no-op.
+            // The DOM click with the tooltip-id selector is reliable and confirmed from ag_bridge.
+            if (cdpForStop) {
+                    // Ground-truth selector from ag_bridge poke.mjs (2026-03-28).
+                    // data-tooltip-id="input-send-button-cancel-tooltip" is the real cancel button.
+                    const CANCEL_CLICK = `(() => {
+                        try {
+                            const btn = document.querySelector('[data-tooltip-id="input-send-button-cancel-tooltip"]');
+                            if (!btn || btn.offsetParent === null) {
+                                return { found: false, frameUrl: window.location.href };
+                            }
+                            btn.click();
+                            return {
+                                found: true,
+                                aria: btn.getAttribute('aria-label') || '',
+                                tooltipId: btn.getAttribute('data-tooltip-id') || '',
+                                cls: btn.className.toString().slice(0, 80),
+                                frameUrl: window.location.href
+                            };
+                        } catch(e) {
+                            return { found: false, error: String(e) };
+                        }
+                    })()`;
+
+                    const domResults: object[] = [];
+                    const allContextIds: Array<number | null> = [null, ...cdpForStop.contexts.map(c => c.id)];
+                    for (const ctxId of allContextIds) {
+                        try {
+                            const params: Record<string, unknown> = { expression: CANCEL_CLICK, returnByValue: true };
+                            if (ctxId !== null) params.contextId = ctxId;
+                            const result = await cdpForStop.call("Runtime.evaluate", params);
+                            const val = result?.result?.value;
+                            if (val) domResults.push({ ctxId, ...val });
+                            if (val?.found) {
+                                console.log('[STOP] cancel click in context', ctxId ?? 'main', JSON.stringify({ tooltipId: val.tooltipId, aria: val.aria }));
+                                rpcOk = true;
+                                break;
+                            }
+                        } catch (err) {
+                            domResults.push({ ctxId, error: (err as Error).message });
+                        }
+                    }
+                    stopLog.domResults = domResults;
+            }
+
+            // Always write the full stop log so every attempt is self-documenting
+            try {
+                fs.writeFileSync(
+                    path.join(this.workspaceRoot, 'ag-stop-probe.json'),
+                    JSON.stringify(stopLog, null, 2),
+                );
+            } catch { /* best-effort */ }
+
+            if (rpcOk) {
+                setTimeout(() => this.updateSnapshot(), 200);
+                return res.json({ ok: true });
+            }
+            res.json({ ok: false, reason: 'no_stop_button_found', cascadeId });
         });
 
         router.post('/upload', async (req, res) => {
@@ -675,6 +931,7 @@ export class AntigravityServer {
                 usable: this.isSnapshotUsable(snapshot),
                 htmlLength: html.length,
                 hasCascadeInHtml: /id\s*=\s*["'](?:cascade|conversation|chat)["']/i.test(html),
+                isGenerating: (snapshot as any).isGenerating ?? null,
                 controlsMeta,
                 surfaceSignals
             });
@@ -748,6 +1005,68 @@ export class AntigravityServer {
             }
         });
 
+        // Debug: generation state probe — hit this while a query is running
+        router.get('/debug/generating', async (_req, res) => {
+            if (this.state.cdpConnections.length === 0) return res.status(503).json({ error: 'CDP not connected' });
+            const cdp = this.state.activeTargetId
+                ? this.state.cdpConnections.find(c => c.id === this.state.activeTargetId)
+                : this.state.cdpConnections[0];
+            if (!cdp) return res.status(503).json({ error: 'no active CDP' });
+
+            const probeScript = `(() => {
+                const norm = (s) => String(s || '').replace(/\\s+/g, ' ').trim();
+                const inputBox = document.querySelector('#antigravity\\\\.agentSidePanelInputBox');
+                const composer = document.querySelector('[data-lexical-editor="true"]');
+                const allBodyBtns = Array.from(document.body.querySelectorAll('button,[role="button"]'));
+                const inputBoxBtns = inputBox ? Array.from(inputBox.querySelectorAll('button,[role="button"]')) : [];
+                const spinners = Array.from(document.body.querySelectorAll(
+                    '[class*="spinner"],[class*="loading"],[class*="generating"],[role="progressbar"],[aria-busy="true"]'
+                ));
+                const ariaBusy = Array.from(document.body.querySelectorAll('[aria-busy="true"]'));
+                return {
+                    inputBoxExists: !!inputBox,
+                    composerExists: !!composer,
+                    composerContenteditable: composer ? composer.getAttribute('contenteditable') : null,
+                    composerAriaDisabled: composer ? composer.getAttribute('aria-disabled') : null,
+                    inputBoxButtonCount: inputBoxBtns.length,
+                    inputBoxButtons: inputBoxBtns.map(b => ({
+                        tag: b.tagName, aria: norm(b.getAttribute('aria-label')),
+                        text: norm(b.textContent || '').slice(0, 40),
+                        disabled: b.hasAttribute('disabled'),
+                        classes: b.className.toString().slice(0, 80),
+                        innerHTML: b.innerHTML.replace(/\\s+/g, ' ').slice(0, 300)
+                    })),
+                    bodyButtonsWithStop: allBodyBtns
+                        .filter(b => {
+                            const aria = norm(b.getAttribute('aria-label'));
+                            const txt = norm(b.textContent || '');
+                            return /stop|cancel/i.test(aria) || /^(stop|cancel)/i.test(txt);
+                        })
+                        .map(b => ({ aria: norm(b.getAttribute('aria-label')), text: norm(b.textContent || '').slice(0,40) })),
+                    spinnerCount: spinners.length,
+                    spinners: spinners.map(el => ({ tag: el.tagName, cls: el.className.toString().slice(0,60), aria: el.getAttribute('aria-busy') })),
+                    ariaBusyElements: ariaBusy.map(el => ({ tag: el.tagName, id: el.id, cls: el.className.toString().slice(0,60) })),
+                    snapshotIsGenerating: ${JSON.stringify(this.state.lastSnapshot?.isGenerating ?? null)}
+                };
+            })()`;
+
+            const ctx = cdp.contexts[0];
+            try {
+                const result = await cdp.call('Runtime.evaluate', {
+                    expression: probeScript,
+                    returnByValue: true,
+                    ...(ctx ? { contextId: ctx.id } : {})
+                });
+                const payload = { ok: true, data: result?.result?.value, error: result?.exceptionDetails };
+                // Write to file so it can be opened in VS Code without browser clipboard issues
+                const outPath = path.join(this.workspaceRoot, 'ag-generating-debug.json');
+                try { fs.writeFileSync(outPath, JSON.stringify(payload, null, 2)); } catch { }
+                res.json(payload);
+            } catch (e) {
+                res.status(500).json({ error: (e as Error).message });
+            }
+        });
+
         // Debug: snapshot capture diagnostics
         router.get('/debug/capture', async (_req, res) => {
             if (this.state.cdpConnections.length === 0) return res.status(503).json({ error: 'CDP not connected' });
@@ -768,6 +1087,95 @@ export class AntigravityServer {
                     contexts: result.contexts,
                     snapshotOk: !!result.snapshot
                 });
+            } catch (e) {
+                res.status(500).json({ error: (e as Error).message });
+            }
+        });
+
+        // Debug: dump input box buttons in real-time via CDP — call this DURING generation
+        // to see exactly what buttons are in the input box (aria, title, class, innerHTML).
+        router.get('/debug/input-box', async (_req, res) => {
+            const cdp = this.state.activeTargetId
+                ? this.state.cdpConnections.find(c => c.id === this.state.activeTargetId)
+                : this.state.cdpConnections[0];
+            if (!cdp) return res.status(503).json({ error: 'CDP not connected' });
+
+            const SCRIPT = `(() => {
+                try {
+                    const norm = (s) => String(s || '').replace(/\\s+/g, ' ').trim();
+                    const inputBox = document.querySelector('#antigravity\\\\.agentSidePanelInputBox') ||
+                                     document.querySelector('[id*="SidePanel"][id*="Input"]');
+                    if (!inputBox) return { inputBoxFound: false };
+                    const btns = Array.from(inputBox.querySelectorAll('button,[role="button"]'));
+                    return {
+                        inputBoxFound: true,
+                        inputBoxId: inputBox.id,
+                        count: btns.length,
+                        buttons: btns.map((b, i) => {
+                            const r = b.getBoundingClientRect();
+                            return {
+                                index: i,
+                                aria: norm(b.getAttribute('aria-label') || ''),
+                                title: norm(b.getAttribute('title') || ''),
+                                cls: (b.className || '').toString().slice(0, 120),
+                                innerText: norm(b.innerText || '').slice(0, 60),
+                                textContent: norm(b.textContent || '').slice(0, 80),
+                                hasSvg: !!b.querySelector('svg'),
+                                svgTitle: norm((b.querySelector('svg title') || {textContent:''}).textContent || ''),
+                                dataAttrs: Object.fromEntries(
+                                    Array.from(b.attributes)
+                                        .filter(a => a.name.startsWith('data-') || ['role','type','disabled'].includes(a.name))
+                                        .map(a => [a.name, a.value.slice(0, 60)])
+                                ),
+                                visible: r.width > 0 && r.height > 0,
+                                rect: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) }
+                            };
+                        })
+                    };
+                } catch(e) { return { error: String(e) }; }
+            })()`;
+
+            try {
+                const result = await cdp.call('Runtime.evaluate', { expression: SCRIPT, returnByValue: true });
+                res.json({ ts: new Date().toISOString(), ...result?.result?.value });
+            } catch (e) {
+                res.status(500).json({ error: (e as Error).message });
+            }
+        });
+
+        // Debug: show raw GetAllCascadeTrajectories response and resolved cascadeId
+        router.get('/debug/cascade-id', async (_req, res) => {
+            try {
+                const { getLsConnection, getActiveCascadeIdFromLs } = await import('../services/ls-discovery');
+                const conn = await getLsConnection();
+                if (!conn) return res.json({ error: 'LS not found', conn: null });
+
+                const proto = conn.useTls ? 'https' : 'http';
+                const url = `${proto}://127.0.0.1:${conn.port}/exa.language_server_pb.LanguageServerService/GetAllCascadeTrajectories`;
+
+                const mod = conn.useTls ? https : http;
+                let rawBody = '';
+                await new Promise<void>((resolve) => {
+                    const payload = '{}';
+                    const req = (mod as typeof https).request(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload), 'x-codeium-csrf-token': conn.csrfToken },
+                        rejectUnauthorized: false, timeout: 5000,
+                    }, (r) => {
+                        r.on('data', (c: Buffer) => { rawBody += c.toString(); });
+                        r.on('end', resolve);
+                    });
+                    req.on('error', () => resolve());
+                    req.on('timeout', () => { req.destroy(); resolve(); });
+                    req.write(payload);
+                    req.end();
+                });
+
+                let parsed: unknown = null;
+                try { parsed = JSON.parse(rawBody); } catch { /* ignore */ }
+
+                const cascadeId = await getActiveCascadeIdFromLs();
+                res.json({ conn: { port: conn.port, useTls: conn.useTls }, cascadeId, rawBody: rawBody.slice(0, 2000), parsed });
             } catch (e) {
                 res.status(500).json({ error: (e as Error).message });
             }

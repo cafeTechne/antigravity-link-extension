@@ -23,7 +23,9 @@ Bring your Antigravity sessions to your phone. Upload files, dictate prompts, an
 - File upload into the active Antigravity chat.
 - Voice-to-text input from mobile (HTTPS required for mic permissions).
 - Active instance switching for multiple Antigravity windows.
+- Stop generation from your phone with a dedicated stop chip.
 - Local-only server with token authentication.
+- Interface available in 16 languages with automatic detection and RTL support.
 
 ## Demo photos
 
@@ -104,6 +106,16 @@ Use the exact launch command shown in the Quick start section. Any Antigravity w
 
 2) **Can I run multiple sessions?**
 Yes. Multiple Antigravity windows are supported as long as each one is launched with the command shown above.
+
+## Internationalization and accessibility
+
+The mobile interface automatically detects your browser's language and renders in:
+
+English · 日本語 · 中文（简体）· 中文（繁體）· 한국어 · Deutsch · Français · Español · Português · Русский · Italiano · Polski · Türkçe · Tiếng Việt · Bahasa Indonesia · العربية
+
+Arabic is rendered right-to-left automatically. Language detection uses `navigator.language` with no configuration required.
+
+The interface is built with semantic HTML, ARIA roles, `aria-live` regions for connection status, keyboard navigation, and screen-reader-compatible labels throughout.
 
 ## Contributing
 

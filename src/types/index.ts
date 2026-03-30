@@ -56,7 +56,12 @@ export interface Snapshot {
         scope?: string;
         mode?: { text?: string; selector?: string } | null;
         model?: { text?: string; selector?: string } | null;
+        stop?: { selector?: string } | null;
+        task?: { text?: string; selector?: string } | null;
+        walkthrough?: { text?: string; selector?: string } | null;
     };
+    /** True when the AI is actively generating a response. */
+    isGenerating?: boolean;
     surfaceSignals?: {
         hasCascade?: boolean;
         hasComposer?: boolean;

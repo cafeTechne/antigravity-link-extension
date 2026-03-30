@@ -3,7 +3,7 @@
     "displayName": "Antigravity Link",
     "description": "Mobile upload and voice-to-text bridge for Antigravity",
     "icon": "icon.png",
-    "version": "1.0.12",
+    "version": "1.0.13",
     "license": "MIT",
     "engines": {
         "vscode": "^1.90.0"
@@ -18,7 +18,8 @@
     },
     "activationEvents": [
         "onStartupFinished",
-        "onCommand:antigravity-link.start"
+        "onCommand:antigravity-link.start",
+        "onCommand:antigravity-link.selectNetworkInterface"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -37,6 +38,11 @@
                 "command": "antigravity-link.showQR",
                 "title": "Show QR Code",
                 "category": "Antigravity Link"
+            },
+            {
+                "command": "antigravity-link.selectNetworkInterface",
+                "title": "Select Network Interface",
+                "category": "Antigravity Link"
             }
         ],
         "configuration": {
@@ -45,32 +51,37 @@
                 "antigravityLink.port": {
                     "type": "number",
                     "default": 3000,
-                    "description": "Port for the local upload server"
+                    "description": "%config.port.description%"
                 },
                 "antigravityLink.autoStart": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Start Antigravity Link automatically when VS Code launches"
+                    "description": "%config.autoStart.description%"
                 },
                 "antigravityLink.useHttps": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Serve the mobile bridge over HTTPS with a self-signed certificate"
+                    "description": "%config.useHttps.description%"
                 },
                 "antigravityLink.preferredHost": {
                     "type": "string",
                     "default": "",
-                    "description": "Optional IPv4 LAN host to advertise in QR/URL (example: 192.168.1.101)"
+                    "description": "%config.preferredHost.description%"
+                },
+                "antigravityLink.preferredNetworkInterface": {
+                    "type": "string",
+                    "default": "",
+                    "description": "%config.preferredNetworkInterface.description%"
                 },
                 "antigravityLink.strictWorkbenchOnly": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Only consider workbench.html CDP targets (recommended for stability)"
+                    "description": "%config.strictWorkbenchOnly.description%"
                 },
                 "antigravityLink.includeFallbackTargets": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Allow non-workbench fallback targets (jetski/launchpad) when strict mode is disabled"
+                    "description": "%config.includeFallbackTargets.description%"
                 }
             }
         }
@@ -82,7 +93,8 @@
         "typecheck": "tsc -p ./ --noEmit",
         "bundle": "node ./esbuild.js",
         "package": "vsce package",
-        "test": "mocha -r ts-node/register src/test/injectFile.test.ts src/test/injectMessage.test.ts"
+        "deploy": "npm run bundle && xcopy /Y out\\extension.js \"%USERPROFILE%\\.antigravity\\extensions\\cafetechne.antigravity-link-extension-1.0.13\\out\\\" && xcopy /Y public\\index.html \"%USERPROFILE%\\.antigravity\\extensions\\cafetechne.antigravity-link-extension-1.0.13\\public\\\"",
+        "test": "mocha -r ts-node/register src/test/injectFile.test.ts src/test/injectMessage.test.ts src/test/isGeneratingTracker.test.ts src/test/scriptValidity.test.ts"
     },
     "devDependencies": {
         "@types/chai": "^5.2.3",

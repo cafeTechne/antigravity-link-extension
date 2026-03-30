@@ -8,190 +8,282 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1a1a1a">
+    <meta name="theme-color" content="#141218">
     <title>Antigravity Link</title>
     <style>
+        /* ── MD3 Dark Baseline Color Tokens ──────────────────────────────── */
         :root {
-            --bg-deep: hsl(240, 10%, 8%);
-            --bg-dock: hsla(240, 10%, 15%, 0.8);
-            --accent: #3b82f6;
-            --border: hsla(0, 0%, 100%, 0.1);
-            --text-main: #e0e0e0;
-            --text-dim: #999;
+            --md-bg:          #141218;
+            --md-surf-lo:     #1d1b20;
+            --md-surf:        #211f26;
+            --md-surf-hi:     #2b2930;
+            --md-surf-xhi:    #36343b;
+            --md-on-surf:     #e6e1e5;
+            --md-on-surf-var: #cac4d0;
+            --md-outline:     #938f99;
+            --md-outline-var: #49454f;
+            /* Primary — blue matching Antigravity */
+            --md-primary:     #aac7ff;
+            --md-on-primary:  #0a305f;
+            --md-prim-cont:   #284777;
+            --md-on-prim-c:   #d6e3ff;
+            /* Error */
+            --md-error:       #ffb4ab;
+            --md-err-cont:    #93000a;
+            /* MD3 Shape tokens */
+            --md-r-xs:   4px;
+            --md-r-sm:   8px;
+            --md-r-md:   12px;
+            --md-r-lg:   16px;
+            --md-r-xl:   28px;
+            --md-r-full: 50px;
+            /* MD3 Elevation */
+            --md-elev1: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.15);
+            --md-elev2: 0 1px 2px rgba(0,0,0,.3), 0 4px 8px rgba(0,0,0,.2);
+            --md-elev3: 0 4px 8px rgba(0,0,0,.3), 0 8px 16px rgba(0,0,0,.2);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
+        /* ── Reset ───────────────────────────────────────────────────────── */
+        *, *::before, *::after {
+            margin: 0; padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
 
-        html {
-            overflow: hidden;
-            height: 100%;
-        }
-
+        html { height: 100%; overflow: hidden; }
 
         body {
-            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: var(--bg-deep);
-            color: var(--text-main);
+            font-family: 'Google Sans', 'Roboto', system-ui, -apple-system, sans-serif;
+            background: var(--md-bg);
+            color: var(--md-on-surf);
             height: 100%;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        /* --- Chat Area --- */
-        .chat-container {
+        /* ── MD3 Focus ring ──────────────────────────────────────────────── */
+        :focus-visible {
+            outline: 3px solid var(--md-primary);
+            outline-offset: 2px;
+        }
+
+        /* ── MD3 Top App Bar ─────────────────────────────────────────────── */
+        .md-top-bar {
+            height: 48px;
+            background: var(--md-surf-hi);
+            display: flex;
+            align-items: center;
+            padding: 0 2px 0 12px;
+            gap: 2px;
+            flex-shrink: 0;
+            box-shadow: var(--md-elev1);
+            z-index: 100;
+        }
+
+        #connectivityBadge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px 8px 0;
             flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
-            position: relative;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 20px;
-        }
-
-
-        .chat-content {
-            padding: 16px 16px 0;
-            min-height: auto;
-        }
-
-        /* --- Unified Bottom Dock --- */
-        .bottom-dock {
-            background: var(--bg-dock);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            padding-bottom: env(safe-area-inset-bottom, 12px);
-            z-index: 1000;
-        }
-
-        /* Top Layer: Control Chips */
-        .dock-controls {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 6px;
-            padding: 8px;
-            border-bottom: 1px solid hsla(0, 0%, 100%, 0.05);
-            width: 100%;
-        }
-
-        .control-chip {
-            background: hsla(0, 0%, 100%, 0.05);
-            border: 1px solid var(--border);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 500;
-            color: var(--text-dim);
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 4px;
+            min-width: 0;
             cursor: pointer;
-            transition: all 0.2s;
+            border-radius: var(--md-r-full);
         }
+        #connectivityBadge:active { background: rgba(255,255,255,.06); }
 
-        .control-chip:active {
-            transform: scale(0.96);
-            background: hsla(0, 0%, 100%, 0.1);
-        }
-
-        .control-chip .label {
-            font-size: 9px;
-            opacity: 0.5;
-            text-transform: uppercase;
-        }
-
-        .control-chip.active {
-            color: var(--text-main);
-            border-color: hsla(217, 91%, 60%, 0.3);
-            background: hsla(217, 91%, 60%, 0.1);
-        }
-
-        .stop-chip {
-            border-color: rgba(239, 68, 68, 0.5);
-            background: rgba(239, 68, 68, 0.12);
-            color: #ef4444;
-        }
-        .stop-chip:active { background: rgba(239, 68, 68, 0.25); }
-
-        .task-chip {
-            border-color: rgba(245, 158, 11, 0.4);
-            background: rgba(245, 158, 11, 0.08);
-            color: #f59e0b;
-        }
-        .task-chip:active { background: rgba(245, 158, 11, 0.2); }
-
-        .walkthrough-chip {
-            border-color: rgba(139, 92, 246, 0.4);
-            background: rgba(139, 92, 246, 0.08);
-            color: #8b5cf6;
-        }
-        .walkthrough-chip:active { background: rgba(139, 92, 246, 0.2); }
-
-        .plan-chip {
-            border-color: rgba(20, 184, 166, 0.4);
-            background: rgba(20, 184, 166, 0.08);
-            color: #14b8a6;
-        }
-        .plan-chip:active { background: rgba(20, 184, 166, 0.2); }
-
-        .content-sheet-body {
-            padding: 16px;
-            max-height: 68vh;
-            overflow-y: auto;
-            font-size: 14px;
-            line-height: 1.65;
-            color: #e0e0e0;
-            white-space: pre-wrap;
-            word-break: break-word;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        /* Bottom Layer: Input Row */
-        .dock-input-row {
-            padding: 8px;
-            /* Tightening for iPhone SE */
-            display: flex;
-            align-items: stretch;
-            gap: 6px;
-            min-height: 54px;
-            width: 100%;
-            overflow: hidden;
-        }
-
-        .action-stack {
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            gap: 4px;
-            padding-bottom: 2px;
+        #statusDot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--md-outline);
             flex-shrink: 0;
         }
 
-        .input-bubble {
-            flex: 1;
-            background: hsla(0, 0%, 0%, 0.3);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            display: flex;
-            align-items: center;
-            padding: 4px 12px 6px;
-            /* Slightly more balanced vertical padding */
-            transition: border-color 0.2s;
-            min-width: 0;
-            /* Allow flex shrinking */
+        #statusText {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: var(--md-on-surf-var);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .input-bubble:focus-within {
-            border-color: var(--accent);
+        /* ── MD3 Icon Button (44×44 visual, 48px touch target via padding) ── */
+        .md-icon-btn {
+            width: 44px; height: 44px;
+            border-radius: var(--md-r-full);
+            display: flex; align-items: center; justify-content: center;
+            background: transparent;
+            border: none;
+            color: var(--md-on-surf-var);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .md-icon-btn::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: currentColor;
+            opacity: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            transition: opacity 150ms;
+        }
+        .md-icon-btn:active::after { opacity: 0.12; }
+        .md-icon-btn svg { pointer-events: none; }
+
+        /* ── Chat Area ───────────────────────────────────────────────────── */
+        #chatContainer {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden; /* fallback for older Safari */
+            overflow-x: clip;   /* preferred: no scroll-container side effect */
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            position: relative;
+        }
+
+        #chatContent {
+            padding: 16px 16px 8px;
+        }
+
+        /* ── Loading State ───────────────────────────────────────────────── */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 48px 24px;
+            color: var(--md-on-surf-var);
+            font-size: 14px;
+            letter-spacing: 0.25px;
+        }
+
+        .spinner {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: 3px solid var(--md-outline-var);
+            border-top-color: var(--md-primary);
+            animation: md-spin 1s linear infinite;
+        }
+        @keyframes md-spin { to { transform: rotate(360deg); } }
+
+        /* ── Chips Bar (MD3 Assist Chip spec) ────────────────────────────── */
+        #nativeStatusBar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: var(--md-surf);
+            border-top: 1px solid var(--md-outline-var);
+            flex-shrink: 0;
+        }
+
+        .control-chip {
+            display: inline-flex;
+            align-items: center;
+            height: 28px;
+            padding: 0 10px;
+            border-radius: var(--md-r-full);
+            border: 1px solid var(--md-outline-var);
+            background: transparent;
+            color: var(--md-on-surf-var);
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.1px;
+            gap: 6px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            user-select: none;
+            touch-action: manipulation;
+            /* Extend touch target beyond visual bounds */
+            -webkit-tap-highlight-color: transparent;
+        }
+        .control-chip::before {
+            content: '';
+            position: absolute;
+            inset: -8px;
+        }
+        .control-chip::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: currentColor;
+            opacity: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            transition: opacity 150ms;
+        }
+        .control-chip:active::after { opacity: 0.12; }
+
+        .control-chip .label {
+            font-size: 10px;
+            font-weight: 600;
+            opacity: 0.55;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .control-chip.active {
+            background: var(--md-prim-cont);
+            border-color: transparent;
+            color: var(--md-on-prim-c);
+        }
+
+        .stop-chip {
+            border-color: rgba(255,180,171,.35);
+            background: rgba(147,0,10,.15);
+            color: var(--md-error);
+        }
+        .task-chip {
+            border-color: rgba(245,191,80,.3);
+            background: rgba(245,158,11,.08);
+            color: #fbbf24;
+        }
+        .walkthrough-chip {
+            border-color: rgba(167,139,250,.3);
+            background: rgba(124,58,237,.08);
+            color: #a78bfa;
+        }
+        .plan-chip {
+            border-color: rgba(52,211,153,.3);
+            background: rgba(16,185,129,.08);
+            color: #34d399;
+        }
+
+        /* ── MD3 Input Bar ───────────────────────────────────────────────── */
+        .md-input-bar {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 6px;
+            padding-bottom: max(6px, env(safe-area-inset-bottom));
+            background: var(--md-surf);
+            border-top: 1px solid var(--md-outline-var);
+            flex-shrink: 0;
+        }
+
+        /* MD3 Filled Text Field */
+        .md-field-wrap {
+            flex: 1;
+            background: var(--md-surf-xhi);
+            border-radius: var(--md-r-md) var(--md-r-md) var(--md-r-xs) var(--md-r-xs);
+            border-bottom: 1.5px solid var(--md-outline);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            min-height: 40px;
+            transition: border-color 0.15s, border-bottom-width 0.1s;
+            min-width: 0;
+        }
+        .md-field-wrap:focus-within {
+            border-bottom: 2px solid var(--md-primary);
         }
 
         #messageInput {
@@ -199,377 +291,937 @@
             background: transparent;
             border: none;
             outline: none;
-            color: #fff;
+            color: var(--md-on-surf);
+            font-family: inherit;
             font-size: 16px;
-            line-height: 22px;
-            padding: 6px 0;
-            margin: 0;
+            line-height: 20px;
+            padding: 8px 0;
             resize: none;
-            max-height: 160px;
+            max-height: 140px;
+            min-height: 20px;
         }
+        #messageInput::placeholder { color: var(--md-outline); }
 
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: hsla(0, 0%, 100%, 0.05);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            font-size: 16px;
-            color: var(--text-dim);
-            transition: all 0.2s;
-            flex-shrink: 0;
-        }
-
-        .action-btn:active {
-            transform: scale(0.9);
-            background: hsla(0, 0%, 100%, 0.1);
-        }
-
+        /* MD3 Small FAB — send button */
         #sendBtn {
-            background: var(--accent);
-            color: #fff;
-            width: 42px;
-            /* Slightly narrower */
-            border-radius: 18px;
+            width: 44px; height: 44px;
+            border-radius: var(--md-r-md);
+            background: var(--md-prim-cont);
+            color: var(--md-on-prim-c);
             border: none;
-            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: var(--md-elev3);
+            cursor: pointer;
             flex-shrink: 0;
-            transition: all 0.2s;
-            padding: 0;
+            position: relative;
+            overflow: hidden;
         }
-
-        #sendBtn svg {
-            width: 18px;
-            height: 18px;
+        #sendBtn::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: currentColor;
+            opacity: 0;
+            transition: opacity 150ms;
+            pointer-events: none;
         }
+        #sendBtn:active::after { opacity: 0.12; }
+        #sendBtn:disabled { opacity: 0.38; box-shadow: none; }
+        #sendBtn svg { pointer-events: none; }
 
-        #sendBtn:active {
-            transform: scale(0.95);
-            opacity: 0.9;
-        }
-
-        /* --- Modals & Sheets --- */
-        .modal-overlay {
+        /* ── Scroll-to-bottom FAB ────────────────────────────────────────── */
+        #scrollToBottom {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
+            bottom: 148px;
+            right: 16px;
+            width: 40px; height: 40px;
+            border-radius: var(--md-r-full);
+            background: var(--md-surf-hi);
+            border: 1px solid var(--md-outline-var);
+            color: var(--md-on-surf);
+            font-size: 18px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--md-elev2);
+            cursor: pointer;
+            z-index: 200;
+        }
+        #scrollToBottom.show { display: flex; }
+
+        /* ── MD3 Dialogs (login, instances) ──────────────────────────────── */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             display: none;
             justify-content: center;
             align-items: center;
             z-index: 2000;
         }
+        .modal-overlay.show { display: flex; }
 
-        .modal-overlay.show {
-            display: flex;
-        }
-
-        .login-box {
-            background: var(--bg-dock);
+        .md-dialog {
+            background: var(--md-surf-hi);
+            border-radius: var(--md-r-xl);
             padding: 24px;
-            border-radius: 20px;
-            width: 90%;
-            max-width: 340px;
-            border: 1px solid var(--border);
+            width: 90vw;
+            max-width: 360px;
+            box-shadow: var(--md-elev3);
         }
 
-        .login-input {
-            width: 100%;
-            padding: 14px;
-            background: #000;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            color: #fff;
-            margin: 16px 0;
+        .md-dialog-title {
+            font-size: 22px;
+            font-weight: 500;
+            color: var(--md-on-surf);
+            margin-bottom: 20px;
         }
 
-        .login-btn {
+        .md-outlined-field {
+            width: 100%;
+            padding: 14px 16px;
+            background: transparent;
+            border: 1.5px solid var(--md-outline);
+            border-radius: var(--md-r-xs);
+            color: var(--md-on-surf);
+            font-family: inherit;
+            font-size: 16px;
+            margin-bottom: 16px;
+            outline: none;
+        }
+        .md-outlined-field:focus { border-color: var(--md-primary); border-width: 2px; }
+        .md-outlined-field::placeholder { color: var(--md-outline); }
+
+        .md-filled-btn {
             width: 100%;
             padding: 14px;
-            background: var(--accent);
+            background: var(--md-primary);
             border: none;
-            border-radius: 12px;
-            color: #fff;
-            font-weight: bold;
+            border-radius: var(--md-r-full);
+            color: var(--md-on-primary);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.1px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
-
-        .bottom-sheet {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--bg-dock);
-            backdrop-filter: blur(20px);
-            border-top-left-radius: 24px;
-            border-top-right-radius: 24px;
-            z-index: 2001;
-            transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            max-height: 70vh;
-            display: flex;
-            flex-direction: column;
+        .md-filled-btn::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: #000;
+            opacity: 0;
+            transition: opacity 150ms;
+            pointer-events: none;
         }
+        .md-filled-btn:active::after { opacity: 0.12; }
 
-        .bottom-sheet.show {
-            transform: translateY(0);
-        }
-
-        .sheet-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
+        .md-dialog-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 16px;
         }
 
-        .sheet-list {
-            padding: 8px 0;
+        .md-text-btn {
+            background: transparent;
+            border: none;
+            color: var(--md-primary);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: var(--md-r-xs);
+            min-width: 48px; min-height: 48px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        #instancesList {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 48vh;
             overflow-y: auto;
         }
 
-        .option-item {
-            padding: 16px 20px;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .option-item:active {
-            background: hsla(0, 0%, 100%, 0.05);
-        }
-
-        /* Helpers */
-        .fab {
-            position: fixed;
-            bottom: 140px;
-            right: 16px;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: var(--accent);
-            color: white;
+        /* ── MD3 Bottom Sheets ───────────────────────────────────────────── */
+        #sheetOverlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.5);
             display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
+            z-index: 2000;
         }
+        #sheetOverlay.show { display: block; }
 
-        .fab.show {
+        .bottom-sheet {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: var(--md-surf-lo);
+            border-top-left-radius: 28px;
+            border-top-right-radius: 28px;
+            box-shadow: var(--md-elev3);
+            z-index: 2001;
+            transform: translateY(100%);
+            /* MD3 emphasized-decelerate easing */
+            transition: transform 0.3s cubic-bezier(0.05, 0.7, 0.1, 1.0);
+            max-height: 72vh;
             display: flex;
+            flex-direction: column;
+        }
+        .bottom-sheet.show { transform: translateY(0); }
+
+        /* MD3 drag handle */
+        .bottom-sheet::before {
+            content: '';
+            display: block;
+            width: 32px; height: 4px;
+            background: var(--md-outline-var);
+            border-radius: 2px;
+            margin: 12px auto 0;
+            flex-shrink: 0;
         }
 
-        @keyframes ripple {
-            0% {
-                transform: translate(-50%, -50%) scale(0);
-                opacity: 0.8;
-            }
-
-            100% {
-                transform: translate(-50%, -50%) scale(2);
-                opacity: 0;
-            }
+        .sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px 12px;
+            flex-shrink: 0;
         }
 
+        .sheet-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--md-on-surf);
+            letter-spacing: 0.15px;
+        }
+
+        .sheet-close {
+            width: 40px; height: 40px;
+            border-radius: var(--md-r-full);
+            background: transparent;
+            border: none;
+            color: var(--md-on-surf-var);
+            font-size: 22px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .sheet-close:active { background: rgba(202,196,208,.12); }
+
+        .sheet-list {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 4px 0 max(16px, env(safe-area-inset-bottom));
+        }
+
+        /* MD3 List item */
+        .option-item {
+            min-height: 56px;
+            padding: 12px 20px;
+            color: var(--md-on-surf);
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+        .option-item::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: currentColor;
+            opacity: 0;
+            transition: opacity 150ms;
+            pointer-events: none;
+        }
+        .option-item:active::after { opacity: 0.08; }
+
+        .content-sheet-body {
+            flex: 1;
+            padding: 12px 20px max(20px, env(safe-area-inset-bottom));
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--md-on-surf);
+            -webkit-overflow-scrolling: touch;
+            word-break: break-word;
+        }
+
+        /* ── Click ripple (visual feedback for mirror taps) ──────────────── */
         .click-ripple {
             position: fixed;
-            width: 30px;
-            height: 30px;
-            background: rgba(255, 255, 255, 0.4);
+            width: 28px; height: 28px;
+            background: rgba(170,199,255,.55);
             border-radius: 50%;
             pointer-events: none;
-            animation: ripple 0.5s ease-out forwards;
+            animation: click-ripple-kf 0.5s ease-out forwards;
             z-index: 9999;
         }
+        @keyframes click-ripple-kf {
+            0%   { transform: translate(-50%,-50%) scale(0); opacity: 0.9; }
+            100% { transform: translate(-50%,-50%) scale(2.5); opacity: 0; }
+        }
 
-        #connectivityBadge {
+        /* ── Debug Log ───────────────────────────────────────────────────── */
+        #debugLog {
             position: fixed;
-            top: 16px;
-            left: 16px;
-            z-index: 9999;
-            padding: 8px 12px;
-            border-radius: 20px;
-            background: hsla(0, 0%, 0%, 0.5);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 11px;
-            font-weight: bold;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        .fab-top-right {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            z-index: 9999;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: hsla(0, 0%, 100%, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        .fab-top-right:active {
-            transform: scale(0.9);
+            top: 72px; left: 12px; right: 12px;
+            max-height: 200px;
+            background: rgba(0,0,0,.92);
+            border-radius: var(--md-r-md);
+            border: 1px solid var(--md-outline-var);
+            color: #4ade80;
+            font-family: 'Roboto Mono', 'Consolas', monospace;
+            font-size: 10px;
+            padding: 8px;
+            overflow-y: auto;
+            z-index: 9000;
+            display: none;
+            pointer-events: none;
         }
     </style>
 </head>
 
 <body>
-    <div class="chat-container" id="chatContainer">
-        <div class="chat-content" id="chatContent">
+
+    <!-- MD3 Top App Bar -->
+    <header class="md-top-bar">
+        <div id="connectivityBadge" role="status" aria-live="polite" aria-label="Connection status">
+            <div id="statusDot" aria-hidden="true"></div>
+            <span id="statusText">CONNECTING</span>
+        </div>
+        <button class="md-icon-btn" id="instancesBtn"
+            aria-label="Switch active instance" data-i18n-aria="ariaSwitchInstance">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="14" height="10" x="2" y="3" rx="2"/>
+                <path d="M8 21h8m-4-4v4"/>
+                <rect width="8" height="6" x="14" y="11" rx="1"/>
+            </svg>
+        </button>
+    </header>
+
+    <!-- Chat Mirror Area -->
+    <main id="chatContainer">
+        <div id="chatContent"
+            role="region" aria-live="polite"
+            aria-label="Antigravity conversation"
+            data-i18n-aria="ariaConversation">
             <div class="loading">
-                <div class="spinner"></div>
-                <span>Initializing...</span>
+                <div class="spinner" aria-hidden="true"></div>
+                <span data-i18n="initializing">Initializing...</span>
             </div>
+        </div>
+    </main>
+
+    <!-- MD3 Chips / Control Bar -->
+    <nav id="nativeStatusBar" aria-label="Controls">
+        <div id="modeChip" class="control-chip" role="button" tabindex="0"
+            aria-label="Change mode" data-i18n-aria="ariaChangeMode">
+            <span class="label" data-i18n="chipMode">MODE</span>
+            <span id="modeVal">...</span>
+        </div>
+        <div id="modelChip" class="control-chip" role="button" tabindex="0"
+            aria-label="Change model" data-i18n-aria="ariaChangeModel">
+            <span class="label" data-i18n="chipModel">MODEL</span>
+            <span id="modelVal">...</span>
+        </div>
+        <div id="stopChip" class="control-chip stop-chip" role="button" tabindex="0"
+            aria-label="Stop generation" data-i18n-aria="ariaStopGeneration" style="display:none">
+            <span data-i18n="chipStop">&#9632; STOP</span>
+        </div>
+        <div id="taskChip" class="control-chip task-chip" role="button" tabindex="0"
+            aria-label="View task" data-i18n-aria="ariaViewTask">
+            <span class="label" data-i18n="chipTaskLabel">TASK</span>
+            <span id="taskVal" data-i18n="chipTaskValue">Task</span>
+        </div>
+        <div id="walkthroughChip" class="control-chip walkthrough-chip" role="button" tabindex="0"
+            aria-label="View walkthrough guide" data-i18n-aria="ariaViewGuide">
+            <span class="label" data-i18n="chipGuideLabel">GUIDE</span>
+            <span id="walkthroughVal" data-i18n="chipGuideValue">Walkthrough</span>
+        </div>
+        <div id="planChip" class="control-chip plan-chip" role="button" tabindex="0"
+            aria-label="View implementation plan" data-i18n-aria="ariaViewPlan">
+            <span class="label" data-i18n="chipPlanLabel">PLAN</span>
+            <span data-i18n="chipPlanValue">View Plan</span>
+        </div>
+    </nav>
+
+    <!-- MD3 Input Bar -->
+    <div class="md-input-bar">
+        <button id="uploadBtn" class="md-icon-btn"
+            aria-label="Upload file" data-i18n-aria="ariaUploadFile">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.51a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+        </button>
+        <button id="micBtn" class="md-icon-btn"
+            aria-label="Voice input" data-i18n-aria="ariaVoiceInput">
+            <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+            </svg>
+        </button>
+        <input type="file" id="fileInput" style="display:none" aria-hidden="true">
+        <div class="md-field-wrap">
+            <textarea id="messageInput"
+                rows="1"
+                aria-label="Message input"
+                data-i18n-aria="ariaMessageInput"
+                aria-multiline="true"></textarea>
+        </div>
+        <button id="sendBtn" aria-label="Send message" data-i18n-aria="ariaSendMessage">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Scroll-to-bottom FAB -->
+    <button id="scrollToBottom"
+        aria-label="Scroll to bottom" data-i18n-aria="ariaScrollToBottom">↓</button>
+
+    <!-- Login Dialog -->
+    <div class="modal-overlay" id="loginModal"
+        role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+        <div class="md-dialog">
+            <h2 class="md-dialog-title" id="loginTitle" data-i18n="identityTitle">🔐 Identity</h2>
+            <input type="password" class="md-outlined-field" id="tokenInput"
+                placeholder="Access Token" autocomplete="off"
+                data-i18n-placeholder="accessToken" aria-label="Access token">
+            <button class="md-filled-btn" id="loginBtn" data-i18n="authorize">Authorize</button>
         </div>
     </div>
 
-    <!-- Top Navigation -->
-    <div id="connectivityBadge">
-        <div id="statusDot" style="width:8px; height:8px; border-radius:50%; background:#aaa;"></div>
-        <span id="statusText">CONNECTING</span>
-    </div>
-    <button class="fab-top-right" id="instancesBtn">🖥️</button>
-
-    <!-- Unified Bottom Dock -->
-    <div class="bottom-dock">
-        <!-- Floating Scroll FAB -->
-        <button class="fab" id="scrollToBottom">↓</button>
-
-        <!-- Top Layer: Scrapers (Mode, Model, Stop, Task, Walkthrough) -->
-        <div class="dock-controls" id="nativeStatusBar">
-            <div id="modeChip" class="control-chip">
-                <span class="label">MODE</span>
-                <span id="modeVal">...</span>
+    <!-- Instances Dialog -->
+    <div class="modal-overlay" id="instancesModal"
+        role="dialog" aria-modal="true" aria-labelledby="instancesTitle">
+        <div class="md-dialog">
+            <div class="md-dialog-row">
+                <h3 class="md-dialog-title" id="instancesTitle"
+                    style="margin:0;font-size:20px;"
+                    data-i18n="activeInstances">Active Instances</h3>
+                <button class="md-text-btn" id="closeInstancesBtn" aria-label="Close">✕</button>
             </div>
-            <div id="modelChip" class="control-chip">
-                <span class="label">MODEL</span>
-                <span id="modelVal">...</span>
-            </div>
-            <div id="stopChip" class="control-chip stop-chip" style="display:none">
-                <span>&#9632; STOP</span>
-            </div>
-            <div id="taskChip" class="control-chip task-chip">
-                <span class="label">TASK</span>
-                <span id="taskVal">Task</span>
-            </div>
-            <div id="walkthroughChip" class="control-chip walkthrough-chip">
-                <span class="label">GUIDE</span>
-                <span id="walkthroughVal">Walkthrough</span>
-            </div>
-            <div id="planChip" class="control-chip plan-chip">
-                <span class="label">PLAN</span>
-                <span>View Plan</span>
-            </div>
-        </div>
-
-        <!-- Bottom Layer: Messaging -->
-        <div class="dock-input-row">
-            <div class="action-stack">
-                <button id="uploadBtn" class="action-btn" title="Upload File">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path
-                            d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.51a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                    </svg>
-                </button>
-                <button id="micBtn" class="action-btn" title="Speech to Text">
-                    <svg id="micIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                        <line x1="12" y1="19" x2="12" y2="22" />
-                    </svg>
-                </button>
-            </div>
-            <div class="input-bubble">
-                <input type="file" id="fileInput" style="display:none">
-                <textarea id="messageInput" placeholder="Message Antigravity..." rows="1"></textarea>
-            </div>
-            <button id="sendBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                </svg>
-            </button>
+            <div id="instancesList"></div>
         </div>
     </div>
 
-    <!-- Modals & Sheets -->
-    <div class="modal-overlay" id="loginModal">
-        <div class="login-box">
-            <h2 class="login-title">🔐 Identity</h2>
-            <input type="password" class="login-input" id="tokenInput" placeholder="Access Token" autocomplete="off">
-            <button class="login-btn" id="loginBtn">Authorize</button>
-        </div>
-    </div>
+    <!-- Sheet Overlay -->
+    <div id="sheetOverlay" role="presentation"></div>
 
-    <div class="modal-overlay" id="instancesModal">
-        <div class="login-box">
-            <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
-                <h3 style="margin:0;">🖥️ Active Instances</h3>
-                <span id="closeInstancesBtn" style="cursor:pointer; opacity:0.5;">✕</span>
-            </div>
-            <div id="instancesList"
-                style="display:flex; flex-direction:column; gap:10px; max-height:40vh; overflow-y:auto;">
-                <!-- Injected -->
-            </div>
-        </div>
-    </div>
-
-    <div id="sheetOverlay" class="modal-overlay" style="background:rgba(0,0,0,0.5)"></div>
-    <div id="optionsSheet" class="bottom-sheet">
+    <!-- Options Bottom Sheet -->
+    <div id="optionsSheet" class="bottom-sheet"
+        role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
         <div class="sheet-header">
-            <h3 id="sheetTitle" class="sheet-title">Options</h3>
-            <button id="sheetClose" class="sheet-close"
-                style="background:transparent; border:none; color:#fff; font-size:24px;">&times;</button>
+            <h3 id="sheetTitle" class="sheet-title" data-i18n="sheetOptions">Options</h3>
+            <button id="sheetClose" class="sheet-close" aria-label="Close">&times;</button>
         </div>
-        <div id="sheetList" class="sheet-list">
-            <!-- Options injected -->
-        </div>
-    </div>
-    <div id="contentSheet" class="bottom-sheet">
-        <div class="sheet-header">
-            <h3 id="contentSheetTitle" class="sheet-title">Content</h3>
-            <button id="contentSheetClose" class="sheet-close"
-                style="background:transparent; border:none; color:#fff; font-size:24px;">&times;</button>
-        </div>
-        <div id="contentSheetBody" class="content-sheet-body">
-            <!-- Content injected -->
-        </div>
+        <div id="sheetList" class="sheet-list" role="listbox"></div>
     </div>
 
-    <!-- Debug Log (Hidden) -->
-    <div id="debugLog"
-        style="position:fixed; top:60px; left:16px; right:16px; max-height:200px; background:rgba(0,0,0,0.9); border-radius:12px; border:1px solid #444; color:#0f0; font-family:monospace; font-size:10px; padding:8px; overflow-y:auto; z-index:9000; display:none; pointer-events:none;">
+    <!-- Content Bottom Sheet -->
+    <div id="contentSheet" class="bottom-sheet"
+        role="dialog" aria-modal="true" aria-labelledby="contentSheetTitle">
+        <div class="sheet-header">
+            <h3 id="contentSheetTitle" class="sheet-title" data-i18n="sheetContent">Content</h3>
+            <button id="contentSheetClose" class="sheet-close" aria-label="Close">&times;</button>
+        </div>
+        <div id="contentSheetBody" class="content-sheet-body"></div>
     </div>
+
+    <!-- Debug Log -->
+    <div id="debugLog" role="log" aria-live="off" aria-label="Debug log"></div>
 
     <script>
+        // ── i18n ────────────────────────────────────────────────────────────────────
+        const STRINGS = {
+            en: {
+                connecting: 'CONNECTING', connected: 'CONNECTED', disconnected: 'DISCONNECTED',
+                reconnecting: 'RECONNECTING',
+                initializing: 'Initializing...', loading: 'Loading...',
+                messagePlaceholder: 'Message Antigravity...',
+                authorize: 'Authorize', identityTitle: '🔐 Identity', accessToken: 'Access Token',
+                chipMode: 'MODE', chipModel: 'MODEL', chipStop: '■ STOP',
+                chipTaskLabel: 'TASK', chipTaskValue: 'Task',
+                chipGuideLabel: 'GUIDE', chipGuideValue: 'Walkthrough',
+                chipPlanLabel: 'PLAN', chipPlanValue: 'View Plan',
+                loadingTask: 'Loading task\u2026', loadingGuide: 'Loading walkthrough\u2026',
+                loadingPlan: 'Loading plan\u2026',
+                taskNotFound: 'Task file not found on server.',
+                walkthroughNotFound: 'Walkthrough file not found on server.',
+                planNotFound: 'No implementation plan found \u2014 the AI may not have generated one yet.',
+                contentNotFound: 'Content not found in snapshot \u2014 it may have opened in a different view in the IDE.',
+                sheetOptions: 'Options', sheetContent: 'Content',
+                sheetImplementationPlan: 'Implementation Plan', sheetTask: 'Task', sheetWalkthrough: 'Walkthrough',
+                activeInstances: 'Active Instances',
+                ariaChangeMode: 'Change mode', ariaChangeModel: 'Change model',
+                ariaStopGeneration: 'Stop generation', ariaViewTask: 'View task',
+                ariaViewGuide: 'View walkthrough guide', ariaViewPlan: 'View implementation plan',
+                ariaScrollToBottom: 'Scroll to bottom', ariaSwitchInstance: 'Switch active instance',
+                ariaSendMessage: 'Send message', ariaUploadFile: 'Upload file', ariaVoiceInput: 'Voice input',
+                ariaMessageInput: 'Message input',
+                ariaConversation: 'Antigravity conversation',
+            },
+            ja: {
+                connecting: '接続中', connected: '接続済み', disconnected: '切断',
+                reconnecting: '再接続中',
+                initializing: '初期化中...', loading: '読み込み中...',
+                messagePlaceholder: 'Antigravityにメッセージ...',
+                authorize: '認証', identityTitle: '🔐 認証情報', accessToken: 'アクセストークン',
+                chipMode: 'モード', chipModel: 'モデル', chipStop: '■ 停止',
+                chipTaskLabel: 'タスク', chipTaskValue: 'タスク',
+                chipGuideLabel: 'ガイド', chipGuideValue: 'ウォークスルー',
+                chipPlanLabel: 'プラン', chipPlanValue: 'プランを表示',
+                loadingTask: 'タスクを読み込み中\u2026', loadingGuide: 'ウォークスルーを読み込み中\u2026',
+                loadingPlan: 'プランを読み込み中\u2026',
+                taskNotFound: 'サーバーでタスクファイルが見つかりません。',
+                walkthroughNotFound: 'サーバーでウォークスルーファイルが見つかりません。',
+                planNotFound: '実装プランが見つかりません \u2014 AIがまだ生成していない可能性があります。',
+                contentNotFound: 'スナップショットにコンテンツが見つかりません \u2014 IDEの別のビューで開いた可能性があります。',
+                sheetOptions: 'オプション', sheetContent: 'コンテンツ',
+                sheetImplementationPlan: '実装プラン', sheetTask: 'タスク', sheetWalkthrough: 'ウォークスルー',
+                activeInstances: 'アクティブインスタンス',
+                ariaChangeMode: 'モードを変更', ariaChangeModel: 'モデルを変更',
+                ariaStopGeneration: '生成を停止', ariaViewTask: 'タスクを表示',
+                ariaViewGuide: 'ウォークスルーガイドを表示', ariaViewPlan: '実装プランを表示',
+                ariaScrollToBottom: '一番下へスクロール', ariaSwitchInstance: 'アクティブインスタンスを切り替え',
+                ariaSendMessage: 'メッセージを送信', ariaUploadFile: 'ファイルをアップロード', ariaVoiceInput: '音声入力',
+                ariaMessageInput: 'メッセージ入力',
+                ariaConversation: 'Antigravityの会話',
+            },
+            'zh-CN': {
+                connecting: '连接中', connected: '已连接', disconnected: '已断开',
+                reconnecting: '重新连接中',
+                initializing: '初始化中...', loading: '加载中...',
+                messagePlaceholder: '向 Antigravity 发送消息...',
+                authorize: '授权', identityTitle: '🔐 身份验证', accessToken: '访问令牌',
+                chipMode: '模式', chipModel: '模型', chipStop: '■ 停止',
+                chipTaskLabel: '任务', chipTaskValue: '任务',
+                chipGuideLabel: '指南', chipGuideValue: '演练',
+                chipPlanLabel: '计划', chipPlanValue: '查看计划',
+                loadingTask: '正在加载任务\u2026', loadingGuide: '正在加载演练\u2026',
+                loadingPlan: '正在加载计划\u2026',
+                taskNotFound: '服务器上未找到任务文件。',
+                walkthroughNotFound: '服务器上未找到演练文件。',
+                planNotFound: '未找到实施计划 \u2014 AI 可能尚未生成。',
+                contentNotFound: '快照中未找到内容 \u2014 可能已在 IDE 的其他视图中打开。',
+                sheetOptions: '选项', sheetContent: '内容',
+                sheetImplementationPlan: '实施计划', sheetTask: '任务', sheetWalkthrough: '演练',
+                activeInstances: '活动实例',
+                ariaChangeMode: '更改模式', ariaChangeModel: '更改模型',
+                ariaStopGeneration: '停止生成', ariaViewTask: '查看任务',
+                ariaViewGuide: '查看演练指南', ariaViewPlan: '查看实施计划',
+                ariaScrollToBottom: '滚动到底部', ariaSwitchInstance: '切换活动实例',
+                ariaSendMessage: '发送消息', ariaUploadFile: '上传文件', ariaVoiceInput: '语音输入',
+                ariaMessageInput: '消息输入',
+                ariaConversation: 'Antigravity 对话',
+            },
+            'zh-TW': {
+                connecting: '連線中', connected: '已連線', disconnected: '已斷線',
+                reconnecting: '重新連線中',
+                initializing: '初始化中...', loading: '載入中...',
+                messagePlaceholder: '向 Antigravity 傳送訊息...',
+                authorize: '授權', identityTitle: '🔐 身分驗證', accessToken: '存取權杖',
+                chipMode: '模式', chipModel: '模型', chipStop: '■ 停止',
+                chipTaskLabel: '任務', chipTaskValue: '任務',
+                chipGuideLabel: '指南', chipGuideValue: '逐步說明',
+                chipPlanLabel: '計劃', chipPlanValue: '檢視計劃',
+                loadingTask: '正在載入任務\u2026', loadingGuide: '正在載入逐步說明\u2026',
+                loadingPlan: '正在載入計劃\u2026',
+                taskNotFound: '伺服器上找不到任務檔案。',
+                walkthroughNotFound: '伺服器上找不到逐步說明檔案。',
+                planNotFound: '找不到實作計劃 \u2014 AI 可能尚未產生。',
+                contentNotFound: '快照中找不到內容 \u2014 可能已在 IDE 的其他檢視中開啟。',
+                sheetOptions: '選項', sheetContent: '內容',
+                sheetImplementationPlan: '實作計劃', sheetTask: '任務', sheetWalkthrough: '逐步說明',
+                activeInstances: '活動執行個體',
+                ariaChangeMode: '變更模式', ariaChangeModel: '變更模型',
+                ariaStopGeneration: '停止產生', ariaViewTask: '檢視任務',
+                ariaViewGuide: '檢視逐步說明指南', ariaViewPlan: '檢視實作計劃',
+                ariaScrollToBottom: '捲動到底部', ariaSwitchInstance: '切換活動執行個體',
+                ariaSendMessage: '傳送訊息', ariaUploadFile: '上傳檔案', ariaVoiceInput: '語音輸入',
+                ariaMessageInput: '訊息輸入',
+                ariaConversation: 'Antigravity 對話',
+            },
+            ko: {
+                connecting: '연결 중', connected: '연결됨', disconnected: '연결 끊김',
+                reconnecting: '재연결 중',
+                initializing: '초기화 중...', loading: '로딩 중...',
+                messagePlaceholder: 'Antigravity에 메시지 보내기...',
+                authorize: '인증', identityTitle: '🔐 인증 정보', accessToken: '액세스 토큰',
+                chipMode: '모드', chipModel: '모델', chipStop: '■ 중지',
+                chipTaskLabel: '작업', chipTaskValue: '작업',
+                chipGuideLabel: '가이드', chipGuideValue: '연습',
+                chipPlanLabel: '계획', chipPlanValue: '계획 보기',
+                loadingTask: '작업 로딩 중\u2026', loadingGuide: '연습 로딩 중\u2026',
+                loadingPlan: '계획 로딩 중\u2026',
+                taskNotFound: '서버에서 작업 파일을 찾을 수 없습니다.',
+                walkthroughNotFound: '서버에서 연습 파일을 찾을 수 없습니다.',
+                planNotFound: '구현 계획을 찾을 수 없습니다 \u2014 AI가 아직 생성하지 않았을 수 있습니다.',
+                contentNotFound: '스냅샷에서 콘텐츠를 찾을 수 없습니다 \u2014 IDE의 다른 보기에서 열렸을 수 있습니다.',
+                sheetOptions: '옵션', sheetContent: '콘텐츠',
+                sheetImplementationPlan: '구현 계획', sheetTask: '작업', sheetWalkthrough: '연습',
+                activeInstances: '활성 인스턴스',
+                ariaChangeMode: '모드 변경', ariaChangeModel: '모델 변경',
+                ariaStopGeneration: '생성 중지', ariaViewTask: '작업 보기',
+                ariaViewGuide: '연습 가이드 보기', ariaViewPlan: '구현 계획 보기',
+                ariaScrollToBottom: '맨 아래로 스크롤', ariaSwitchInstance: '활성 인스턴스 전환',
+                ariaSendMessage: '메시지 보내기', ariaUploadFile: '파일 업로드', ariaVoiceInput: '음성 입력',
+                ariaMessageInput: '메시지 입력',
+                ariaConversation: 'Antigravity 대화',
+            },
+            de: {
+                connecting: 'VERBINDEN', connected: 'VERBUNDEN', disconnected: 'GETRENNT',
+                reconnecting: 'ERNEUT VERBINDEN',
+                initializing: 'Initialisierung...', loading: 'Laden...',
+                messagePlaceholder: 'Nachricht an Antigravity...',
+                authorize: 'Autorisieren', identityTitle: '🔐 Identität', accessToken: 'Zugriffstoken',
+                chipMode: 'MODUS', chipModel: 'MODELL', chipStop: '■ STOPP',
+                chipTaskLabel: 'AUFGABE', chipTaskValue: 'Aufgabe',
+                chipGuideLabel: 'ANLEITUNG', chipGuideValue: 'Anleitung',
+                chipPlanLabel: 'PLAN', chipPlanValue: 'Plan anzeigen',
+                loadingTask: 'Aufgabe wird geladen\u2026', loadingGuide: 'Anleitung wird geladen\u2026',
+                loadingPlan: 'Plan wird geladen\u2026',
+                taskNotFound: 'Aufgabendatei nicht auf dem Server gefunden.',
+                walkthroughNotFound: 'Anleitungsdatei nicht auf dem Server gefunden.',
+                planNotFound: 'Kein Implementierungsplan gefunden \u2014 die KI hat möglicherweise noch keinen generiert.',
+                contentNotFound: 'Inhalt nicht im Snapshot gefunden \u2014 er wurde möglicherweise in einer anderen IDE-Ansicht geöffnet.',
+                sheetOptions: 'Optionen', sheetContent: 'Inhalt',
+                sheetImplementationPlan: 'Implementierungsplan', sheetTask: 'Aufgabe', sheetWalkthrough: 'Anleitung',
+                activeInstances: 'Aktive Instanzen',
+                ariaChangeMode: 'Modus wechseln', ariaChangeModel: 'Modell wechseln',
+                ariaStopGeneration: 'Generierung stoppen', ariaViewTask: 'Aufgabe anzeigen',
+                ariaViewGuide: 'Anleitung anzeigen', ariaViewPlan: 'Implementierungsplan anzeigen',
+                ariaScrollToBottom: 'Nach unten scrollen', ariaSwitchInstance: 'Aktive Instanz wechseln',
+                ariaSendMessage: 'Nachricht senden', ariaUploadFile: 'Datei hochladen', ariaVoiceInput: 'Spracheingabe',
+                ariaMessageInput: 'Nachrichteneingabe',
+                ariaConversation: 'Antigravity-Gespräch',
+            },
+            fr: {
+                connecting: 'CONNEXION', connected: 'CONNECTÉ', disconnected: 'DÉCONNECTÉ',
+                reconnecting: 'RECONNEXION',
+                initializing: 'Initialisation...', loading: 'Chargement...',
+                messagePlaceholder: 'Message à Antigravity...',
+                authorize: 'Autoriser', identityTitle: '🔐 Identité', accessToken: "Jeton d'accès",
+                chipMode: 'MODE', chipModel: 'MODÈLE', chipStop: '■ ARRÊT',
+                chipTaskLabel: 'TÂCHE', chipTaskValue: 'Tâche',
+                chipGuideLabel: 'GUIDE', chipGuideValue: 'Guide pas à pas',
+                chipPlanLabel: 'PLAN', chipPlanValue: 'Voir le plan',
+                loadingTask: 'Chargement de la tâche\u2026', loadingGuide: 'Chargement du guide\u2026',
+                loadingPlan: 'Chargement du plan\u2026',
+                taskNotFound: 'Fichier de tâche introuvable sur le serveur.',
+                walkthroughNotFound: 'Fichier de guide introuvable sur le serveur.',
+                planNotFound: "Aucun plan d'implémentation trouvé \u2014 l'IA ne l'a peut-être pas encore généré.",
+                contentNotFound: "Contenu introuvable dans le snapshot \u2014 il a peut-être été ouvert dans une autre vue de l'IDE.",
+                sheetOptions: 'Options', sheetContent: 'Contenu',
+                sheetImplementationPlan: "Plan d'implémentation", sheetTask: 'Tâche', sheetWalkthrough: 'Guide pas à pas',
+                activeInstances: 'Instances actives',
+                ariaChangeMode: 'Changer de mode', ariaChangeModel: 'Changer de modèle',
+                ariaStopGeneration: 'Arrêter la génération', ariaViewTask: 'Voir la tâche',
+                ariaViewGuide: 'Voir le guide pas à pas', ariaViewPlan: "Voir le plan d'implémentation",
+                ariaScrollToBottom: 'Faire défiler vers le bas', ariaSwitchInstance: 'Changer d\'instance active',
+                ariaSendMessage: 'Envoyer le message', ariaUploadFile: 'Téléverser un fichier', ariaVoiceInput: 'Saisie vocale',
+                ariaMessageInput: 'Saisie du message',
+                ariaConversation: 'Conversation Antigravity',
+            },
+            es: {
+                connecting: 'CONECTANDO', connected: 'CONECTADO', disconnected: 'DESCONECTADO',
+                reconnecting: 'RECONECTANDO',
+                initializing: 'Inicializando...', loading: 'Cargando...',
+                messagePlaceholder: 'Mensaje a Antigravity...',
+                authorize: 'Autorizar', identityTitle: '🔐 Identidad', accessToken: 'Token de acceso',
+                chipMode: 'MODO', chipModel: 'MODELO', chipStop: '■ DETENER',
+                chipTaskLabel: 'TAREA', chipTaskValue: 'Tarea',
+                chipGuideLabel: 'GUÍA', chipGuideValue: 'Tutorial',
+                chipPlanLabel: 'PLAN', chipPlanValue: 'Ver plan',
+                loadingTask: 'Cargando tarea\u2026', loadingGuide: 'Cargando tutorial\u2026',
+                loadingPlan: 'Cargando plan\u2026',
+                taskNotFound: 'Archivo de tarea no encontrado en el servidor.',
+                walkthroughNotFound: 'Archivo de tutorial no encontrado en el servidor.',
+                planNotFound: 'No se encontró plan de implementación \u2014 es posible que la IA aún no lo haya generado.',
+                contentNotFound: 'Contenido no encontrado en el snapshot \u2014 puede haberse abierto en otra vista del IDE.',
+                sheetOptions: 'Opciones', sheetContent: 'Contenido',
+                sheetImplementationPlan: 'Plan de implementación', sheetTask: 'Tarea', sheetWalkthrough: 'Tutorial',
+                activeInstances: 'Instancias activas',
+                ariaChangeMode: 'Cambiar modo', ariaChangeModel: 'Cambiar modelo',
+                ariaStopGeneration: 'Detener generación', ariaViewTask: 'Ver tarea',
+                ariaViewGuide: 'Ver guía de tutorial', ariaViewPlan: 'Ver plan de implementación',
+                ariaScrollToBottom: 'Desplazarse al final', ariaSwitchInstance: 'Cambiar instancia activa',
+                ariaSendMessage: 'Enviar mensaje', ariaUploadFile: 'Subir archivo', ariaVoiceInput: 'Entrada de voz',
+                ariaMessageInput: 'Entrada de mensaje',
+                ariaConversation: 'Conversación de Antigravity',
+            },
+            pt: {
+                connecting: 'CONECTANDO', connected: 'CONECTADO', disconnected: 'DESCONECTADO',
+                reconnecting: 'RECONECTANDO',
+                initializing: 'Inicializando...', loading: 'Carregando...',
+                messagePlaceholder: 'Mensagem para o Antigravity...',
+                authorize: 'Autorizar', identityTitle: '🔐 Identidade', accessToken: 'Token de acesso',
+                chipMode: 'MODO', chipModel: 'MODELO', chipStop: '■ PARAR',
+                chipTaskLabel: 'TAREFA', chipTaskValue: 'Tarefa',
+                chipGuideLabel: 'GUIA', chipGuideValue: 'Tutorial',
+                chipPlanLabel: 'PLANO', chipPlanValue: 'Ver plano',
+                loadingTask: 'Carregando tarefa\u2026', loadingGuide: 'Carregando tutorial\u2026',
+                loadingPlan: 'Carregando plano\u2026',
+                taskNotFound: 'Arquivo de tarefa não encontrado no servidor.',
+                walkthroughNotFound: 'Arquivo de tutorial não encontrado no servidor.',
+                planNotFound: 'Nenhum plano de implementação encontrado \u2014 a IA pode ainda não ter gerado um.',
+                contentNotFound: 'Conteúdo não encontrado no snapshot \u2014 pode ter sido aberto em outra visualização do IDE.',
+                sheetOptions: 'Opções', sheetContent: 'Conteúdo',
+                sheetImplementationPlan: 'Plano de implementação', sheetTask: 'Tarefa', sheetWalkthrough: 'Tutorial',
+                activeInstances: 'Instâncias ativas',
+                ariaChangeMode: 'Mudar modo', ariaChangeModel: 'Mudar modelo',
+                ariaStopGeneration: 'Parar geração', ariaViewTask: 'Ver tarefa',
+                ariaViewGuide: 'Ver guia de tutorial', ariaViewPlan: 'Ver plano de implementação',
+                ariaScrollToBottom: 'Rolar para o final', ariaSwitchInstance: 'Trocar instância ativa',
+                ariaSendMessage: 'Enviar mensagem', ariaUploadFile: 'Enviar arquivo', ariaVoiceInput: 'Entrada de voz',
+                ariaMessageInput: 'Entrada de mensagem',
+                ariaConversation: 'Conversa do Antigravity',
+            },
+            ru: {
+                connecting: 'ПОДКЛЮЧЕНИЕ', connected: 'ПОДКЛЮЧЕНО', disconnected: 'ОТКЛЮЧЕНО',
+                reconnecting: 'ПЕРЕПОДКЛЮЧЕНИЕ',
+                initializing: 'Инициализация...', loading: 'Загрузка...',
+                messagePlaceholder: 'Сообщение в Antigravity...',
+                authorize: 'Авторизоваться', identityTitle: '🔐 Учётные данные', accessToken: 'Токен доступа',
+                chipMode: 'РЕЖИМ', chipModel: 'МОДЕЛЬ', chipStop: '■ СТОП',
+                chipTaskLabel: 'ЗАДАЧА', chipTaskValue: 'Задача',
+                chipGuideLabel: 'ГАЙД', chipGuideValue: 'Руководство',
+                chipPlanLabel: 'ПЛАН', chipPlanValue: 'Смотреть план',
+                loadingTask: 'Загрузка задачи\u2026', loadingGuide: 'Загрузка руководства\u2026',
+                loadingPlan: 'Загрузка плана\u2026',
+                taskNotFound: 'Файл задачи не найден на сервере.',
+                walkthroughNotFound: 'Файл руководства не найден на сервере.',
+                planNotFound: 'План реализации не найден \u2014 ИИ, возможно, ещё не создал его.',
+                contentNotFound: 'Контент не найден в снимке \u2014 он мог открыться в другом представлении IDE.',
+                sheetOptions: 'Параметры', sheetContent: 'Содержимое',
+                sheetImplementationPlan: 'План реализации', sheetTask: 'Задача', sheetWalkthrough: 'Руководство',
+                activeInstances: 'Активные экземпляры',
+                ariaChangeMode: 'Изменить режим', ariaChangeModel: 'Изменить модель',
+                ariaStopGeneration: 'Остановить генерацию', ariaViewTask: 'Посмотреть задачу',
+                ariaViewGuide: 'Посмотреть руководство', ariaViewPlan: 'Посмотреть план реализации',
+                ariaScrollToBottom: 'Прокрутить вниз', ariaSwitchInstance: 'Переключить активный экземпляр',
+                ariaSendMessage: 'Отправить сообщение', ariaUploadFile: 'Загрузить файл', ariaVoiceInput: 'Голосовой ввод',
+                ariaMessageInput: 'Ввод сообщения',
+                ariaConversation: 'Разговор Antigravity',
+            },
+            it: {
+                connecting: 'CONNESSIONE', connected: 'CONNESSO', disconnected: 'DISCONNESSO',
+                reconnecting: 'RICONNESSIONE',
+                initializing: 'Inizializzazione...', loading: 'Caricamento...',
+                messagePlaceholder: 'Messaggio ad Antigravity...',
+                authorize: 'Autorizza', identityTitle: '🔐 Identità', accessToken: 'Token di accesso',
+                chipMode: 'MODALITÀ', chipModel: 'MODELLO', chipStop: '■ STOP',
+                chipTaskLabel: 'ATTIVITÀ', chipTaskValue: 'Attività',
+                chipGuideLabel: 'GUIDA', chipGuideValue: 'Procedura dettagliata',
+                chipPlanLabel: 'PIANO', chipPlanValue: 'Vedi piano',
+                loadingTask: 'Caricamento attività\u2026', loadingGuide: 'Caricamento guida\u2026',
+                loadingPlan: 'Caricamento piano\u2026',
+                taskNotFound: 'File attività non trovato sul server.',
+                walkthroughNotFound: 'File guida non trovato sul server.',
+                planNotFound: "Nessun piano di implementazione trovato \u2014 l'AI potrebbe non averlo ancora generato.",
+                contentNotFound: "Contenuto non trovato nello snapshot \u2014 potrebbe essere stato aperto in un'altra vista dell'IDE.",
+                sheetOptions: 'Opzioni', sheetContent: 'Contenuto',
+                sheetImplementationPlan: 'Piano di implementazione', sheetTask: 'Attività', sheetWalkthrough: 'Procedura dettagliata',
+                activeInstances: 'Istanze attive',
+                ariaChangeMode: 'Cambia modalità', ariaChangeModel: 'Cambia modello',
+                ariaStopGeneration: 'Interrompi generazione', ariaViewTask: 'Vedi attività',
+                ariaViewGuide: 'Vedi guida dettagliata', ariaViewPlan: 'Vedi piano di implementazione',
+                ariaScrollToBottom: 'Scorri fino in fondo', ariaSwitchInstance: 'Cambia istanza attiva',
+                ariaSendMessage: 'Invia messaggio', ariaUploadFile: 'Carica file', ariaVoiceInput: 'Input vocale',
+                ariaMessageInput: 'Input messaggio',
+                ariaConversation: 'Conversazione Antigravity',
+            },
+            pl: {
+                connecting: 'ŁĄCZENIE', connected: 'POŁĄCZONO', disconnected: 'ROZŁĄCZONO',
+                reconnecting: 'PONOWNE ŁĄCZENIE',
+                initializing: 'Inicjalizacja...', loading: 'Ładowanie...',
+                messagePlaceholder: 'Wiadomość do Antigravity...',
+                authorize: 'Autoryzuj', identityTitle: '🔐 Tożsamość', accessToken: 'Token dostępu',
+                chipMode: 'TRYB', chipModel: 'MODEL', chipStop: '■ ZATRZYMAJ',
+                chipTaskLabel: 'ZADANIE', chipTaskValue: 'Zadanie',
+                chipGuideLabel: 'PORADNIK', chipGuideValue: 'Przewodnik',
+                chipPlanLabel: 'PLAN', chipPlanValue: 'Zobacz plan',
+                loadingTask: 'Ładowanie zadania\u2026', loadingGuide: 'Ładowanie przewodnika\u2026',
+                loadingPlan: 'Ładowanie planu\u2026',
+                taskNotFound: 'Plik zadania nie znaleziony na serwerze.',
+                walkthroughNotFound: 'Plik przewodnika nie znaleziony na serwerze.',
+                planNotFound: 'Nie znaleziono planu implementacji \u2014 AI mogło jeszcze nie wygenerować.',
+                contentNotFound: 'Treść nie znaleziona w migawce \u2014 mogła zostać otwarta w innym widoku IDE.',
+                sheetOptions: 'Opcje', sheetContent: 'Treść',
+                sheetImplementationPlan: 'Plan implementacji', sheetTask: 'Zadanie', sheetWalkthrough: 'Przewodnik',
+                activeInstances: 'Aktywne instancje',
+                ariaChangeMode: 'Zmień tryb', ariaChangeModel: 'Zmień model',
+                ariaStopGeneration: 'Zatrzymaj generowanie', ariaViewTask: 'Zobacz zadanie',
+                ariaViewGuide: 'Zobacz przewodnik', ariaViewPlan: 'Zobacz plan implementacji',
+                ariaScrollToBottom: 'Przewiń na dół', ariaSwitchInstance: 'Przełącz aktywną instancję',
+                ariaSendMessage: 'Wyślij wiadomość', ariaUploadFile: 'Prześlij plik', ariaVoiceInput: 'Wejście głosowe',
+                ariaMessageInput: 'Wpisz wiadomość',
+                ariaConversation: 'Rozmowa Antigravity',
+            },
+            tr: {
+                connecting: 'BAĞLANIYOR', connected: 'BAĞLANDI', disconnected: 'BAĞLANTI KESİLDİ',
+                reconnecting: 'YENİDEN BAĞLANIYOR',
+                initializing: 'Başlatılıyor...', loading: 'Yükleniyor...',
+                messagePlaceholder: "Antigravity'e mesaj...",
+                authorize: 'Yetkilendir', identityTitle: '🔐 Kimlik', accessToken: 'Erişim Jetonu',
+                chipMode: 'MOD', chipModel: 'MODEL', chipStop: '■ DURDUR',
+                chipTaskLabel: 'GÖREV', chipTaskValue: 'Görev',
+                chipGuideLabel: 'KILAVUZ', chipGuideValue: 'Kılavuz Tur',
+                chipPlanLabel: 'PLAN', chipPlanValue: 'Planı Gör',
+                loadingTask: 'Görev yükleniyor\u2026', loadingGuide: 'Kılavuz yükleniyor\u2026',
+                loadingPlan: 'Plan yükleniyor\u2026',
+                taskNotFound: 'Görev dosyası sunucuda bulunamadı.',
+                walkthroughNotFound: 'Kılavuz dosyası sunucuda bulunamadı.',
+                planNotFound: 'Uygulama planı bulunamadı \u2014 AI henüz oluşturmamış olabilir.',
+                contentNotFound: 'İçerik anlık görüntüde bulunamadı \u2014 IDE\'nin farklı bir görünümünde açılmış olabilir.',
+                sheetOptions: 'Seçenekler', sheetContent: 'İçerik',
+                sheetImplementationPlan: 'Uygulama Planı', sheetTask: 'Görev', sheetWalkthrough: 'Kılavuz Tur',
+                activeInstances: 'Aktif Örnekler',
+                ariaChangeMode: 'Modu değiştir', ariaChangeModel: 'Modeli değiştir',
+                ariaStopGeneration: 'Üretimi durdur', ariaViewTask: 'Görevi görüntüle',
+                ariaViewGuide: 'Kılavuz turunu görüntüle', ariaViewPlan: 'Uygulama planını görüntüle',
+                ariaScrollToBottom: 'En alta kaydır', ariaSwitchInstance: 'Aktif örneği değiştir',
+                ariaSendMessage: 'Mesaj gönder', ariaUploadFile: 'Dosya yükle', ariaVoiceInput: 'Sesli giriş',
+                ariaMessageInput: 'Mesaj girişi',
+                ariaConversation: 'Antigravity konuşması',
+            },
+            vi: {
+                connecting: 'ĐANG KẾT NỐI', connected: 'ĐÃ KẾT NỐI', disconnected: 'MẤT KẾT NỐI',
+                reconnecting: 'ĐANG KẾT NỐI LẠI',
+                initializing: 'Đang khởi tạo...', loading: 'Đang tải...',
+                messagePlaceholder: 'Nhắn tin cho Antigravity...',
+                authorize: 'Xác thực', identityTitle: '🔐 Danh tính', accessToken: 'Mã thông báo truy cập',
+                chipMode: 'CHẾ ĐỘ', chipModel: 'MÔ HÌNH', chipStop: '■ DỪNG',
+                chipTaskLabel: 'NHIỆM VỤ', chipTaskValue: 'Nhiệm vụ',
+                chipGuideLabel: 'HƯỚNG DẪN', chipGuideValue: 'Hướng dẫn từng bước',
+                chipPlanLabel: 'KẾ HOẠCH', chipPlanValue: 'Xem kế hoạch',
+                loadingTask: 'Đang tải nhiệm vụ\u2026', loadingGuide: 'Đang tải hướng dẫn\u2026',
+                loadingPlan: 'Đang tải kế hoạch\u2026',
+                taskNotFound: 'Không tìm thấy tệp nhiệm vụ trên máy chủ.',
+                walkthroughNotFound: 'Không tìm thấy tệp hướng dẫn trên máy chủ.',
+                planNotFound: 'Không tìm thấy kế hoạch triển khai \u2014 AI có thể chưa tạo ra.',
+                contentNotFound: 'Không tìm thấy nội dung trong ảnh chụp \u2014 có thể đã mở ở chế độ xem khác trong IDE.',
+                sheetOptions: 'Tùy chọn', sheetContent: 'Nội dung',
+                sheetImplementationPlan: 'Kế hoạch triển khai', sheetTask: 'Nhiệm vụ', sheetWalkthrough: 'Hướng dẫn từng bước',
+                activeInstances: 'Phiên bản đang hoạt động',
+                ariaChangeMode: 'Thay đổi chế độ', ariaChangeModel: 'Thay đổi mô hình',
+                ariaStopGeneration: 'Dừng tạo', ariaViewTask: 'Xem nhiệm vụ',
+                ariaViewGuide: 'Xem hướng dẫn từng bước', ariaViewPlan: 'Xem kế hoạch triển khai',
+                ariaScrollToBottom: 'Cuộn xuống cuối', ariaSwitchInstance: 'Chuyển phiên bản đang hoạt động',
+                ariaSendMessage: 'Gửi tin nhắn', ariaUploadFile: 'Tải tệp lên', ariaVoiceInput: 'Nhập giọng nói',
+                ariaMessageInput: 'Nhập tin nhắn',
+                ariaConversation: 'Cuộc hội thoại Antigravity',
+            },
+            id: {
+                connecting: 'MENGHUBUNGKAN', connected: 'TERHUBUNG', disconnected: 'TERPUTUS',
+                reconnecting: 'MENGHUBUNGKAN ULANG',
+                initializing: 'Menginisialisasi...', loading: 'Memuat...',
+                messagePlaceholder: 'Pesan ke Antigravity...',
+                authorize: 'Otorisasi', identityTitle: '🔐 Identitas', accessToken: 'Token Akses',
+                chipMode: 'MODE', chipModel: 'MODEL', chipStop: '■ BERHENTI',
+                chipTaskLabel: 'TUGAS', chipTaskValue: 'Tugas',
+                chipGuideLabel: 'PANDUAN', chipGuideValue: 'Panduan Langkah',
+                chipPlanLabel: 'RENCANA', chipPlanValue: 'Lihat Rencana',
+                loadingTask: 'Memuat tugas\u2026', loadingGuide: 'Memuat panduan\u2026',
+                loadingPlan: 'Memuat rencana\u2026',
+                taskNotFound: 'File tugas tidak ditemukan di server.',
+                walkthroughNotFound: 'File panduan tidak ditemukan di server.',
+                planNotFound: 'Rencana implementasi tidak ditemukan \u2014 AI mungkin belum membuatnya.',
+                contentNotFound: 'Konten tidak ditemukan dalam snapshot \u2014 mungkin telah dibuka di tampilan IDE yang berbeda.',
+                sheetOptions: 'Opsi', sheetContent: 'Konten',
+                sheetImplementationPlan: 'Rencana Implementasi', sheetTask: 'Tugas', sheetWalkthrough: 'Panduan Langkah',
+                activeInstances: 'Instans Aktif',
+                ariaChangeMode: 'Ganti mode', ariaChangeModel: 'Ganti model',
+                ariaStopGeneration: 'Hentikan pembuatan', ariaViewTask: 'Lihat tugas',
+                ariaViewGuide: 'Lihat panduan langkah', ariaViewPlan: 'Lihat rencana implementasi',
+                ariaScrollToBottom: 'Gulir ke bawah', ariaSwitchInstance: 'Beralih instans aktif',
+                ariaSendMessage: 'Kirim pesan', ariaUploadFile: 'Unggah file', ariaVoiceInput: 'Input suara',
+                ariaMessageInput: 'Input pesan',
+                ariaConversation: 'Percakapan Antigravity',
+            },
+            ar: {
+                connecting: 'جارٍ الاتصال', connected: 'متصل', disconnected: 'غير متصل',
+                reconnecting: 'إعادة الاتصال',
+                initializing: 'جارٍ التهيئة...', loading: 'جارٍ التحميل...',
+                messagePlaceholder: 'أرسل رسالة إلى Antigravity...',
+                authorize: 'تفويض', identityTitle: '🔐 الهوية', accessToken: 'رمز الوصول',
+                chipMode: 'الوضع', chipModel: 'النموذج', chipStop: '■ إيقاف',
+                chipTaskLabel: 'المهمة', chipTaskValue: 'المهمة',
+                chipGuideLabel: 'الدليل', chipGuideValue: 'الإرشاد التفصيلي',
+                chipPlanLabel: 'الخطة', chipPlanValue: 'عرض الخطة',
+                loadingTask: 'جارٍ تحميل المهمة\u2026', loadingGuide: 'جارٍ تحميل الإرشاد\u2026',
+                loadingPlan: 'جارٍ تحميل الخطة\u2026',
+                taskNotFound: 'ملف المهمة غير موجود على الخادم.',
+                walkthroughNotFound: 'ملف الإرشاد غير موجود على الخادم.',
+                planNotFound: 'لم يتم العثور على خطة التنفيذ \u2014 قد لا يكون الذكاء الاصطناعي قد أنشأها بعد.',
+                contentNotFound: 'المحتوى غير موجود في اللقطة \u2014 ربما تم فتحه في عرض مختلف في بيئة التطوير.',
+                sheetOptions: 'خيارات', sheetContent: 'محتوى',
+                sheetImplementationPlan: 'خطة التنفيذ', sheetTask: 'المهمة', sheetWalkthrough: 'الإرشاد التفصيلي',
+                activeInstances: 'الحالات النشطة',
+                ariaChangeMode: 'تغيير الوضع', ariaChangeModel: 'تغيير النموذج',
+                ariaStopGeneration: 'إيقاف التوليد', ariaViewTask: 'عرض المهمة',
+                ariaViewGuide: 'عرض دليل الإرشاد', ariaViewPlan: 'عرض خطة التنفيذ',
+                ariaScrollToBottom: 'التمرير إلى الأسفل', ariaSwitchInstance: 'تبديل الحالة النشطة',
+                ariaSendMessage: 'إرسال الرسالة', ariaUploadFile: 'رفع ملف', ariaVoiceInput: 'إدخال صوتي',
+                ariaMessageInput: 'إدخال الرسالة',
+                ariaConversation: 'محادثة Antigravity',
+            },
+        };
+
+        function t(key) {
+            const lang = navigator.language || 'en';
+            const exact = STRINGS[lang];
+            if (exact && exact[key] !== undefined) return exact[key];
+            // Try language prefix (e.g. 'zh' from 'zh-HK')
+            const prefix = lang.split('-')[0];
+            const prefixMatch = STRINGS[prefix] || STRINGS[prefix.toLowerCase()];
+            if (prefixMatch && prefixMatch[key] !== undefined) return prefixMatch[key];
+            // Also try common regional variants
+            if (lang.toLowerCase().startsWith('zh')) {
+                const cn = STRINGS['zh-CN'];
+                if (cn && cn[key] !== undefined) return cn[key];
+            }
+            if (lang.toLowerCase().startsWith('pt')) {
+                const pt = STRINGS['pt'];
+                if (pt && pt[key] !== undefined) return pt[key];
+            }
+            return STRINGS.en[key] !== undefined ? STRINGS.en[key] : key;
+        }
+
+        // For RTL languages
+        const RTL_LANGS = ['ar', 'he', 'fa', 'ur'];
+        if (RTL_LANGS.some(l => (navigator.language || '').startsWith(l))) {
+            document.documentElement.setAttribute('dir', 'rtl');
+        }
+
+        function applyI18n() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (key) el.textContent = t(key);
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (key) el.placeholder = t(key);
+            });
+            document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+                const key = el.getAttribute('data-i18n-aria');
+                if (key) el.setAttribute('aria-label', t(key));
+            });
+        }
+        // ── end i18n ────────────────────────────────────────────────────────────────
+
         const chatContainer = document.getElementById('chatContainer');
         const chatContent = document.getElementById('chatContent');
         const messageInput = document.getElementById('messageInput');
@@ -600,6 +1252,63 @@
         const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
         const CHAT_SURFACE_SELECTOR = '#cascade, #conversation, #chat, [data-testid="cascade-root"], [data-testid="conversation-root"], [data-testid="chat-root"], [id^="cascade"], [id*="cascade"], [id^="conversation"], [id*="conversation"], [id^="chat"], [id*="chat"]';
         const CHAT_SURFACE = `:is(${CHAT_SURFACE_SELECTOR})`;
+
+        // Scroll chatContainer to show the last real content element in the shadow DOM.
+        //
+        // Two problems with earlier approaches:
+        //   1. Walking all elements could match a CONTAINER whose rect.bottom includes
+        //      blank trailing space (padding, flex spacers, uncollapsed vh containers).
+        //   2. Only scrolling down (delta > 0) means an overshoot into blank space is
+        //      never corrected — the user has to manually scroll back up.
+        //
+        // Fix: prefer LEAF elements (no child elements) whose bounding rect is tight,
+        // fall back to any element only if no leaf with text is found.  Always apply
+        // the delta (positive = scroll down, negative = scroll up) so the position is
+        // corrected in both directions.  This function is only called when the user was
+        // already near the bottom, so correcting upward is always the right move.
+        function scrollToLastContent() {
+            if (!mirrorHost || !mirrorHost.shadowRoot) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                return;
+            }
+            const contentEl = mirrorHost.shadowRoot.getElementById('mirrorContent');
+            if (!contentEl) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                return;
+            }
+
+            const all = contentEl.querySelectorAll('*');
+            const cRect = chatContainer.getBoundingClientRect();
+
+            // Pass 1: leaf elements only — tight bounding rects, no trailing blank space
+            for (let i = all.length - 1; i >= 0; i--) {
+                const el = all[i];
+                if (el.children.length > 0) continue;       // skip containers
+                if (!el.textContent.trim()) continue;
+                const cs = getComputedStyle(el);
+                if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+                const rect = el.getBoundingClientRect();
+                if (rect.height > 0 && rect.width > 0) {
+                    chatContainer.scrollTop += rect.bottom - cRect.bottom + 20;
+                    return;
+                }
+            }
+
+            // Pass 2: any element with text (fallback if no leaf found)
+            for (let i = all.length - 1; i >= 0; i--) {
+                const el = all[i];
+                if (!el.textContent.trim()) continue;
+                const cs = getComputedStyle(el);
+                if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+                const rect = el.getBoundingClientRect();
+                if (rect.height > 0 && rect.width > 0) {
+                    chatContainer.scrollTop += rect.bottom - cRect.bottom + 20;
+                    return;
+                }
+            }
+
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
 
         function normalizeInlineText(value) {
             return String(value || '').replace(/\s+/g, ' ').trim();
@@ -709,7 +1418,8 @@
                 :host {
                     display: block;
                     width: 100%;
-                    overflow-x: hidden;
+                    overflow-x: hidden; /* fallback */
+                    overflow-x: clip;   /* preferred: no scroll-container side effect */
                     color: ${fg};
                     background: transparent;
                     color-scheme: ${scheme};
@@ -749,6 +1459,15 @@
                     overflow-x: auto !important;
                     overflow-wrap: anywhere !important;
                 }
+
+                /* ── Undo buttons — hide in mirror (modal only works in IDE) ────────────
+                   Command rows use flex-row items-end gap-2; the undo button is the
+                   last flex-shrink-0 child. Hide it and the google-symbols icon span. */
+                div.flex.flex-row.items-end.gap-2 > div.flex-shrink-0.pb-1,
+                div.cursor-pointer.opacity-50 > span.google-symbols,
+                span.google-symbols.w-4.h-4 {
+                    display: none !important;
+                }
                 /* ── Skeleton loading placeholders ───────────────────────────────────────
                    Antigravity virtualises old messages out of the viewport and replaces them
                    with sized gray boxes (class bg-gray-500/10, inline height).  In the mirror
@@ -760,40 +1479,87 @@
                     display: none !important;
                 }
 
-                /* ── Collapse flex layout inside the cascade ─────────────────────────────
-                   In the VS Code workbench the cascade lives in a full-viewport flex stack.
-                   .grow / .flex-1 children expand to fill the remaining screen height, and
-                   overflow-y-auto inner containers create fixed-height scroll areas.
-                   In the mobile mirror we want natural document flow — collapse all of these
-                   so no blank space is added below the actual conversation content. */
-                ${CHAT_SURFACE} .grow,
-                ${CHAT_SURFACE} .flex-1,
-                ${CHAT_SURFACE} [class~="flex-1"],
-                ${CHAT_SURFACE} [class~="grow"] {
+                /* ── Collapse flex layout (class-based, no cascade-ID dependency) ──────────
+                   IMPORTANT: these use plain Tailwind class selectors rather than
+                   ${CHAT_SURFACE} so they apply even when the cascade element ID
+                   doesn't match our known list. In the VS Code workbench .grow/.flex-1
+                   children expand to fill the remaining screen height. In the mobile
+                   mirror we want natural document flow. */
+                .grow, [class~="grow"],
+                .flex-1, [class~="flex-1"] {
                     flex-grow: 0 !important;
                     flex-shrink: 0 !important;
                     flex-basis: auto !important;
                 }
 
-                ${CHAT_SURFACE} .h-full,
-                ${CHAT_SURFACE} .min-h-full,
-                ${CHAT_SURFACE} .min-h-screen,
-                ${CHAT_SURFACE} .h-screen {
+                .h-full, .min-h-full, .min-h-screen, .h-screen {
                     height: auto !important;
                     min-height: 0 !important;
                 }
 
-                /* Inner overflow-y-auto scroll containers would create a fixed-height
-                   scrollable area inside the mirror; let the outer mobile scroll handle it. */
-                ${CHAT_SURFACE} .overflow-y-auto,
-                ${CHAT_SURFACE} .overflow-auto {
+                /* Inner scroll containers: let the outer mobile scroll handle it. */
+                .overflow-y-auto, .overflow-auto,
+                .overflow-y-hidden, .overflow-hidden {
                     overflow: visible !important;
                     height: auto !important;
                     max-height: none !important;
                 }
 
+                /* Collapse inline height/min-height styles that expand to fill the
+                   IDE viewport (e.g. style="height:100%" or "min-height:100vh"). */
+                [style*="height:100%"], [style*="height: 100%"],
+                [style*="min-height:100%"], [style*="min-height: 100%"],
+                [style*="height:100vh"], [style*="height: 100vh"],
+                [style*="min-height:100vh"], [style*="min-height: 100vh"] {
+                    height: auto !important;
+                    min-height: 0 !important;
+                }
+
+                /* The cascade/conversation container is a fixed-height scrollport in the IDE.
+                   Collapse it completely so only message content drives the mirror height. */
                 ${CHAT_SURFACE} {
-                    max-width: 100%;
+                    height: auto !important;
+                    min-height: 0 !important;
+                    max-height: none !important;
+                    overflow: visible !important;
+                }
+
+                /* Unconditional collapse of the top-level cascade element regardless of
+                   ID/class.  mirrorContent's direct child is always the captured root
+                   (cascade div or body fallback).  Its first two levels of children are
+                   layout wrappers that inherit the VS Code panel's fixed viewport height.
+                   Collapsing them here ensures natural document flow in the mirror even
+                   when CHAT_SURFACE selectors don't match the running Antigravity version. */
+                #mirrorContent > *,
+                #mirrorContent > * > * {
+                    height: auto !important;
+                    min-height: 0 !important;
+                    max-height: none !important;
+                    overflow-y: visible !important;
+                    flex-grow: 0 !important;
+                    flex-shrink: 0 !important;
+                    flex-basis: auto !important;
+                }
+
+                /* ── Mobile viewport compliance (:host * — unconditional) ────────────────
+                   Applied to ALL shadow DOM children so viewport width is enforced
+                   regardless of whether ${CHAT_SURFACE} matches the cascade element.
+                   word-break/overflow-wrap prevent long tokens (URLs, identifiers, hashes)
+                   from pushing layout wider than 100vw. */
+                :host * {
+                    max-width: 100% !important;
+                    min-width: 0 !important;
+                    word-break: break-word;
+                    overflow-wrap: break-word;
+                }
+
+                /* pre/code: scroll horizontally rather than wrap, override the above */
+                :host pre, :host code {
+                    overflow-x: auto !important;
+                    overflow-wrap: anywhere !important;
+                    word-break: normal !important;
+                    white-space: pre;
+                    -webkit-overflow-scrolling: touch;
                 }
 
                 ${CHAT_SURFACE} img,
@@ -808,8 +1574,11 @@
                     max-width: 100%;
                 }
 
-                ${CHAT_SURFACE} pre {
-                    overflow: auto;
+                ${CHAT_SURFACE} pre,
+                ${CHAT_SURFACE} code {
+                    overflow-x: auto !important;
+                    overflow-wrap: anywhere !important;
+                    word-break: normal !important;
                     -webkit-overflow-scrolling: touch;
                 }
 
@@ -986,6 +1755,7 @@
                     mirrorHost = document.createElement('div');
                     mirrorHost.id = 'snapshotHost';
                     mirrorHost.style.width = '100%';
+                    mirrorHost.style.overflowX = 'clip';
                     mirrorHost.style.minHeight = '1px';
                     chatContent.appendChild(mirrorHost);
                 }
@@ -996,6 +1766,17 @@
             }
 
             mirrorRoot = mirrorHost.shadowRoot;
+
+            // Auto-scroll on content mutations. Uses scrollToLastContent() which finds
+            // the last real element via getBoundingClientRect — avoids blank-space overshoot.
+            if (!mirrorHost._scrollObserver) {
+                const obs = new MutationObserver(() => {
+                    const gap = chatContainer.scrollHeight - chatContainer.clientHeight - chatContainer.scrollTop;
+                    if (gap <= 120) requestAnimationFrame(scrollToLastContent);
+                });
+                obs.observe(mirrorRoot, { childList: true, subtree: true });
+                mirrorHost._scrollObserver = obs;
+            }
             if (!boundClickRoots.has(mirrorRoot)) {
                 mirrorRoot.addEventListener('click', forwardSnapshotClick);
                 boundClickRoots.add(mirrorRoot);
@@ -1130,14 +1911,7 @@
                 }
             }
 
-            const doScrollToBottom = () => {
-                // Scroll to mirrorHost bottom rather than chatContainer.scrollHeight
-                // to avoid landing in blank space created by flex layout artifacts.
-                const target = mirrorHost
-                    ? mirrorHost.offsetTop + mirrorHost.offsetHeight + 16
-                    : chatContainer.scrollHeight;
-                chatContainer.scrollTop = Math.min(target, chatContainer.scrollHeight);
-            };
+            const doScrollToBottom = scrollToLastContent;
 
             if (!initialScrollDone) {
                 initialScrollDone = true;
@@ -1214,9 +1988,14 @@
                         lastSnapshotData = data;
                         renderSnapshot(data);
                         updateControls(data);
+                    } else if (res.status === 503) {
+                        const loader = document.querySelector('.loading span');
+                        if (loader) loader.textContent = 'Connected. Waiting for chat surface...';
                     }
                 } catch (e) {
                     logToScreen(`HTTP Poll Fail: ${e.message}`, '#f87171');
+                    const loader = document.querySelector('.loading span');
+                    if (loader) loader.textContent = 'Connected. Retrying...';
                 }
             };
 
@@ -1413,11 +2192,38 @@
         });
 
         scrollToBottomBtn.addEventListener('click', () => {
-            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+            scrollToLastContent();
         });
 
+        // Stop generation via dedicated /stop endpoint.
+        // The server uses CancelCascadeInvocation (LS RPC) as the primary mechanism
+        // and falls back to DOM click using the last-seen stop selector.
+        async function stopGeneration() {
+            const chip = document.getElementById('stopChip');
+            const btn = sendBtn?._isStopMode ? sendBtn : null;
+            const originalChipHtml = chip?.innerHTML;
+            const originalBtnHtml = btn?.innerHTML;
+            if (chip) { chip.style.opacity = '0.5'; chip.style.pointerEvents = 'none'; }
+            if (btn) { btn.style.opacity = '0.5'; btn.style.pointerEvents = 'none'; }
+            try {
+                await fetch('/stop', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${authToken}` }
+                });
+            } catch { /* best-effort */ } finally {
+                if (chip) { chip.style.opacity = ''; chip.style.pointerEvents = ''; }
+                if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+            }
+        }
+
         // Input handlers
-        sendBtn.addEventListener('click', sendMessage);
+        sendBtn.addEventListener('click', () => {
+            if (sendBtn._isStopMode) {
+                stopGeneration();
+            } else {
+                sendMessage();
+            }
+        });
         messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -1764,6 +2570,16 @@
         async function forwardSnapshotClick(e) {
             if (!authToken) return;
 
+            // During generation, tapping anything in the mirror near the input box area
+            // risks clicking the mic button (which sits next to the cancel button). Route
+            // all mirror taps to stopGeneration() instead of forwarding as raw CDP clicks.
+            if (lastSnapshotData?.isGenerating) {
+                e.preventDefault();
+                e.stopPropagation();
+                stopGeneration();
+                return;
+            }
+
             let target = e.target;
             if (!target || !(target instanceof Element)) return;
             if (target.id === 'snapshotHost') return;
@@ -2003,6 +2819,11 @@
             setTimeout(() => {
                 sheetOverlay.classList.add('show');
                 optionsSheet.classList.add('show');
+                // Focus trap: focus first focusable element
+                setTimeout(() => {
+                    const focusable = optionsSheet.querySelectorAll('button, [tabindex="0"], input, textarea, select, a[href]');
+                    if (focusable.length) focusable[0].focus();
+                }, 50);
             }, 10);
         }
 
@@ -2023,6 +2844,11 @@
             setTimeout(() => {
                 sheetOverlay.classList.add('show');
                 contentSheet.classList.add('show');
+                // Focus trap: focus first focusable element
+                setTimeout(() => {
+                    const focusable = contentSheet.querySelectorAll('button, [tabindex="0"], input, textarea, select, a[href]');
+                    if (focusable.length) focusable[0].focus();
+                }, 50);
             }, 10);
         }
 
@@ -2209,58 +3035,56 @@
         if (modeChip) modeChip.addEventListener('click', () => { if (currentModeSelector) sendClickToServer(currentModeSelector, currentModeText, 'mode', true); });
         if (modelChip) modelChip.addEventListener('click', () => { if (currentModelSelector) sendClickToServer(currentModelSelector, currentModelText, 'model', true); });
 
-        if (stopChip) stopChip.addEventListener('click', () => {
-            if (currentStopSelector) sendClickToServer(currentStopSelector, '', 'stop', false);
-        });
+        if (stopChip) stopChip.addEventListener('click', () => { stopGeneration(); });
 
         if (taskChip) taskChip.addEventListener('click', async () => {
-            showContentSheet('Task', '<p style="color:#999;font-style:italic">Loading task\u2026</p>');
+            showContentSheet(t('sheetTask'), `<p style="color:#999;font-style:italic">${t('loadingTask')}</p>`);
             try {
                 const res = await fetch(`/task?token=${encodeURIComponent(authToken)}`);
                 if (res.ok) {
                     const data = await res.json();
-                    showContentSheet('Task', renderMarkdown(data.content));
+                    showContentSheet(t('sheetTask'), renderMarkdown(data.content));
                 } else {
                     const err = await res.json().catch(() => ({}));
                     const hint = err.searched ? `<br><small style="opacity:0.5">Searched: ${err.searched}</small>` : '';
-                    showContentSheet('Task', `<p style="color:#f87171">Task file not found on server.${hint}</p>`);
+                    showContentSheet(t('sheetTask'), `<p style="color:#f87171">${t('taskNotFound')}${hint}</p>`);
                 }
             } catch (err) {
-                showContentSheet('Task', `<p style="color:#f87171">Error: ${String(err)}</p>`);
+                showContentSheet(t('sheetTask'), `<p style="color:#f87171">Error: ${String(err)}</p>`);
             }
         });
 
         if (walkthroughChip) walkthroughChip.addEventListener('click', async () => {
-            showContentSheet('Walkthrough', '<p style="color:#999;font-style:italic">Loading walkthrough\u2026</p>');
+            showContentSheet(t('sheetWalkthrough'), `<p style="color:#999;font-style:italic">${t('loadingGuide')}</p>`);
             try {
                 const res = await fetch(`/walkthrough?token=${encodeURIComponent(authToken)}`);
                 if (res.ok) {
                     const data = await res.json();
-                    showContentSheet('Walkthrough', renderMarkdown(data.content));
+                    showContentSheet(t('sheetWalkthrough'), renderMarkdown(data.content));
                 } else {
                     const err = await res.json().catch(() => ({}));
                     const hint = err.searched ? `<br><small style="opacity:0.5">Searched: ${err.searched}</small>` : '';
-                    showContentSheet('Walkthrough', `<p style="color:#f87171">Walkthrough file not found on server.${hint}</p>`);
+                    showContentSheet(t('sheetWalkthrough'), `<p style="color:#f87171">${t('walkthroughNotFound')}${hint}</p>`);
                 }
             } catch (err) {
-                showContentSheet('Walkthrough', `<p style="color:#f87171">Error: ${String(err)}</p>`);
+                showContentSheet(t('sheetWalkthrough'), `<p style="color:#f87171">Error: ${String(err)}</p>`);
             }
         });
 
         if (planChip) planChip.addEventListener('click', async () => {
-            showContentSheet('Implementation Plan', '<p style="color:#999;font-style:italic">Loading plan\u2026</p>');
+            showContentSheet(t('sheetImplementationPlan'), `<p style="color:#999;font-style:italic">${t('loadingPlan')}</p>`);
             try {
                 const res = await fetch(`/plan?token=${encodeURIComponent(authToken)}`);
                 if (res.ok) {
                     const data = await res.json();
-                    showContentSheet('Implementation Plan', renderMarkdown(data.content));
+                    showContentSheet(t('sheetImplementationPlan'), renderMarkdown(data.content));
                     return;
                 }
             } catch { }
             // Fall back to in-page detection
             const inPage = cachedPlanText ? renderContentText(cachedPlanText) : '';
-            showContentSheet('Implementation Plan',
-                inPage || '<p style="color:#f87171">No implementation plan found — the AI may not have generated one yet.</p>');
+            showContentSheet(t('sheetImplementationPlan'),
+                inPage || `<p style="color:#f87171">${t('planNotFound')}</p>`);
         });
 
         function updateControls(snapshot) {
@@ -2370,10 +3194,34 @@
             }
             syncLegacyHider([]);
 
-            // ── Stop chip ─────────────────────────────────────────────────────────────
+            // ── Stop chip + send→stop button toggle ────────────────────────────────────
+            // isGenerating is set by the server from two signals:
+            //   1. A stop/cancel button detected in #antigravity\.agentSidePanelInputBox
+            //   2. The Lexical composer being aria-disabled="true"
+            // currentStopSelector is kept for the DOM-click fallback in the server.
             const stopData = controlsMeta && controlsMeta.stop ? controlsMeta.stop : null;
             currentStopSelector = stopData ? String(stopData.selector || '') : '';
-            if (stopChip) stopChip.style.display = currentStopSelector ? '' : 'none';
+            const isGenerating = !!(snapshot && snapshot.isGenerating);
+            if (stopChip) stopChip.style.display = isGenerating ? '' : 'none';
+
+            // Transform the send FAB into a stop button while the AI is generating.
+            // Triggered by isGenerating (not just the stop selector) so it works even
+            // when the stop button has no recognisable label in the DOM.
+            if (isGenerating && !sendBtn._isStopMode) {
+                sendBtn._isStopMode = true;
+                sendBtn.setAttribute('aria-label', t('ariaStopGeneration'));
+                sendBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>';
+                sendBtn.style.background = 'var(--md-err-cont)';
+                sendBtn.style.color = 'var(--md-error)';
+                sendBtn.style.boxShadow = 'none';
+            } else if (!isGenerating && sendBtn._isStopMode) {
+                sendBtn._isStopMode = false;
+                sendBtn.setAttribute('aria-label', t('ariaSendMessage'));
+                sendBtn.innerHTML = sendBtnOriginalIcon;
+                sendBtn.style.background = '';
+                sendBtn.style.color = '';
+                sendBtn.style.boxShadow = '';
+            }
 
             // Task / Walkthrough chips are always visible — content comes from server files,
             // not from the IDE DOM (see /task and /walkthrough endpoints).
@@ -2388,7 +3236,7 @@
                     pendingContentAttempts = 0;
                 } else if (pendingContentAttempts >= 6) {
                     // Give up after ~18 s (6 × 3 s poll) rather than hanging forever
-                    contentSheetBody.innerHTML = '<p style="color:#f87171;font-style:italic">Content not found in snapshot \u2014 it may have opened in a different view in the IDE.</p>';
+                    contentSheetBody.innerHTML = `<p style="color:#f87171;font-style:italic">${t('contentNotFound')}</p>`;
                     pendingContentType = '';
                     pendingContentAttempts = 0;
                 }
@@ -2496,6 +3344,38 @@
                 pendingMenuAttempts = 0;
             }
         }
+
+        // ── a11y: keyboard activation for role=button chips ──────────────────────
+        document.querySelectorAll('[role="button"]').forEach(el => {
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+            });
+        });
+
+        // ── a11y: focus trap for sheets ──────────────────────────────────────────
+        document.addEventListener('keydown', (e) => {
+            const openSheet = document.querySelector('#optionsSheet.show, #contentSheet.show');
+            if (!openSheet) return;
+            if (e.key === 'Escape') {
+                hideSheet();
+                hideContentSheet();
+                return;
+            }
+            if (e.key === 'Tab') {
+                const focusable = Array.from(openSheet.querySelectorAll('button, [tabindex="0"], input, textarea, select, a[href]'));
+                if (focusable.length === 0) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (e.shiftKey) {
+                    if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+                } else {
+                    if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+                }
+            }
+        });
+
+        // ── i18n: apply translations ──────────────────────────────────────────────
+        applyI18n();
 
         // Initial Start
         if (authToken) {

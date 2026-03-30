@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { AntigravityServer } from './server/index';
+import { getActiveCascadeIdFromLs } from './services/ls-discovery';
 import qrcode from 'qrcode';
+import os from 'os';
 
 let server: AntigravityServer | null = null;
 let outputChannel: vscode.OutputChannel;
@@ -29,6 +31,28 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
         vscode.commands.registerCommand('antigravity-link.showQR', async () => {
             await showQR();
+        }),
+        vscode.commands.registerCommand('antigravity-link.selectNetworkInterface', async () => {
+            const interfaces = os.networkInterfaces();
+            const candidates: { label: string; addr: string }[] = [];
+            for (const [name, addrs] of Object.entries(interfaces)) {
+                for (const addr of addrs || []) {
+                    if (!addr.internal && addr.family === 'IPv4') {
+                        candidates.push({ label: `${name} — ${addr.address}`, addr: addr.address });
+                    }
+                }
+            }
+            if (candidates.length === 0) {
+                vscode.window.showWarningMessage('No external IPv4 interfaces found.');
+                return;
+            }
+            const pick = await vscode.window.showQuickPick(candidates.map(c => ({ label: c.addr, description: c.label })), {
+                placeHolder: 'Select the network interface to advertise in the QR code'
+            });
+            if (pick) {
+                await vscode.workspace.getConfiguration('antigravityLink').update('preferredHost', pick.label, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage(`Network interface set to ${pick.label}. Restart the server to apply.`);
+            }
         })
     );
 
@@ -58,8 +82,39 @@ async function startServer(context: vscode.ExtensionContext) {
     process.env.AG_STRICT_WORKBENCH_ONLY = strictWorkbenchOnly ? 'true' : 'false';
     process.env.AG_INCLUDE_FALLBACK_TARGETS = includeFallbackTargets ? 'true' : 'false';
 
+    // Create primary send function using VS Code commands (more reliable than CDP DOM injection)
+    const primarySendFn = async (message: string): Promise<boolean> => {
+        try {
+            // Try sendTextToChat first, then sendPromptToAgentPanel as secondary
+            await vscode.commands.executeCommand('antigravity.sendTextToChat', message);
+            return true;
+        } catch {
+            try {
+                await vscode.commands.executeCommand('antigravity.sendPromptToAgentPanel', message);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+    };
+
+    // Resolve the active cascade ID. Try the VS Code getDiagnostics command first
+    // (fastest — returns googleAgentId which maps to cascadeId), then fall back to
+    // querying the LS RPC directly via GetAllCascadeTrajectories.
+    const getActiveCascadeIdFn = async (): Promise<string> => {
+        try {
+            const raw = await vscode.commands.executeCommand<string>('antigravity.getDiagnostics');
+            if (raw && typeof raw === 'string') {
+                const diag = JSON.parse(raw);
+                const id: string = diag?.recentTrajectories?.[0]?.googleAgentId ?? '';
+                if (id) return id;
+            }
+        } catch { /* fall through */ }
+        return getActiveCascadeIdFromLs();
+    };
+
     // Start the server
-    const newServer = new AntigravityServer(port, context.extensionPath, workspaceRoot, useHttps, preferredHost);
+    const newServer = new AntigravityServer(port, context.extensionPath, workspaceRoot, useHttps, preferredHost, primarySendFn, getActiveCascadeIdFn);
 
     try {
         const urls = await newServer.start();

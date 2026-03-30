@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.0.13
+
+### Stop Generation
+
+- Added ground-truth cancel button detection using `[data-tooltip-id="input-send-button-cancel-tooltip"]` (confirmed from ag_bridge source), replacing unreliable aria/text heuristics that were clicking the wrong button.
+- `/stop` endpoint now attempts the Language Server RPC (`CancelCascadeInvocation`) and always follows up with a direct DOM click, even if the RPC returns 200 — an empty `{}` response indicates a silent no-op when the cascade ID doesn't match.
+- Stop attempts are self-documenting: every call writes `ag-stop-probe.json` with RPC result, cascade ID, and DOM click results for diagnostics.
+- Generation state (`isGenerating`) now derived directly from cancel button visibility rather than hash-change heuristics.
+
+### Mobile Stop UI
+
+- Stop chip dims and becomes non-interactive while the stop request is in flight, giving immediate visual feedback.
+- Send button transforms into a red stop button during generation and restores when generation ends.
+- Mirror taps during generation are routed to `stopGeneration()` instead of being forwarded as raw CDP clicks (prevents accidental mic button activation).
+
+### Mirror Fixes
+
+- Undo buttons hidden in the mirror — they break command row layout on mobile and only open a modal in the IDE.
+- Loading state now shows "Connected. Waiting for chat surface..." when the server is reachable but has no snapshot yet, instead of hanging indefinitely on "Initializing...".
+
+### Bug Fixes
+
+- Fixed TypeScript type assertion (`as HTMLElement`) inside `CAPTURE_SCRIPT` — this was causing a JavaScript SyntaxError in every CDP context, silently preventing all snapshot capture.
+- Fixed reference to undeclared `inputBox` variable inside `collectControls()` in `CAPTURE_SCRIPT` — caused a ReferenceError on every snapshot poll.
+- Fixed command palette entries showing raw `%command.startServer%` NLS placeholders instead of readable titles.
+- Fixed `.vscodeignore` to exclude `.claude/` agent worktrees, debug JSON files, and log files from the packaged extension.
+
+### Developer Experience
+
+- Added `npm run deploy` script: bundles and copies `out/extension.js` + `public/index.html` directly to the installed extension directory. Combined with "Developer: Reload Extension Host", this eliminates the vsix install/reload cycle during development.
+- Added `.vscode/launch.json` for F5 Extension Development Host support.
+- Added `src/test/scriptValidity.test.ts`: 5 tests that validate CDP-injected scripts parse as valid JavaScript and contain no TypeScript-only syntax, preventing recurrence of the above bugs.
+
 ## 1.0.12
 
 ### Mobile Rendering and Layout

@@ -2,6 +2,26 @@ import { CDPConnection, Snapshot, InjectResult, ClickResult } from '../types';
 import { convertVsCodeIcons } from '../utils';
 import util from 'util';
 
+// Runs in the MAIN world (no contextId) to detect generation state from the outer frame,
+// since the snapshot capture runs in a sub-frame that lacks the input box.
+const GENERATION_PROBE_SCRIPT = `(() => {
+    try {
+        // Ground-truth selector confirmed from ag_bridge poke.mjs (2026-03-28):
+        // Antigravity's cancel button always has data-tooltip-id="input-send-button-cancel-tooltip"
+        // and is only visible (offsetParent !== null) while generation is active.
+        const cancelBtn = document.querySelector('[data-tooltip-id="input-send-button-cancel-tooltip"]');
+        const isGenerating = !!(cancelBtn && cancelBtn.offsetParent !== null);
+        return {
+            isGenerating,
+            cancelBtnFound: !!cancelBtn,
+            cancelBtnVisible: isGenerating,
+            cancelBtnAria: cancelBtn ? (cancelBtn.getAttribute('aria-label') || '') : null
+        };
+    } catch(e) {
+        return { error: String(e), isGenerating: false };
+    }
+})()`;
+
 // Scripts
 const CAPTURE_SCRIPT = `(() => {
     try {
@@ -73,14 +93,11 @@ const CAPTURE_SCRIPT = `(() => {
             // because they may live in a toolbar or composer outside the cascade element.
             const allBodyButtons = Array.from(document.body.querySelectorAll('button, [role="button"]'));
 
-            // Detect stop-generation button — may be icon-only so search by aria-label.
-            // Use word-boundary on aria-label to catch "Stop", "Stop generation", etc.
-            const stopEl = allBodyButtons.find((el) => {
-                const aria = normalizeText(el.getAttribute('aria-label') || '');
-                if (aria) return /\bstop\b/i.test(aria);
-                const text = normalizeText(el.innerText || el.textContent || '');
-                return /^stop(?: generat\w*)?$/i.test(text);
-            }) || null;
+            // Ground-truth selector confirmed from ag_bridge poke.mjs (2026-03-28):
+            // The cancel button always has data-tooltip-id="input-send-button-cancel-tooltip"
+            // and is only visible (offsetParent !== null) while generation is active.
+            const stopEl = document.querySelector('[data-tooltip-id="input-send-button-cancel-tooltip"]') || null;
+            const isGenerating = !!(stopEl && stopEl.offsetParent !== null);
 
             // Detect Task / Walkthrough buttons by visible text or aria-label.
             // Also query [role="tab"] and <a> in case they're rendered as non-button elements.
@@ -110,7 +127,8 @@ const CAPTURE_SCRIPT = `(() => {
                 model: model ? { text: model.text, selector: toSelector(model.el) } : null,
                 stop: stopEl ? { selector: toSelector(stopEl) } : null,
                 task: taskEl ? { text: normalizeText(taskEl.innerText || taskEl.textContent || 'Task'), selector: toSelector(taskEl) } : null,
-                walkthrough: walkthroughEl ? { text: normalizeText(walkthroughEl.innerText || walkthroughEl.textContent || 'Walkthrough'), selector: toSelector(walkthroughEl) } : null
+                walkthrough: walkthroughEl ? { text: normalizeText(walkthroughEl.innerText || walkthroughEl.textContent || 'Walkthrough'), selector: toSelector(walkthroughEl) } : null,
+                isGenerating
             };
         };
 
@@ -204,10 +222,12 @@ const CAPTURE_SCRIPT = `(() => {
         const rootStyles = window.getComputedStyle(document.documentElement);
         const bodyStyles = window.getComputedStyle(document.body);
 
+        const controls = collectControls(cascade || document.body);
         return {
             html: cleanHtml,
             controlsHtml: fullBodyHtml,
-            controlsMeta: collectControls(cascade || document.body),
+            controlsMeta: controls,
+            isGenerating: controls.isGenerating ?? false,
             surfaceSignals,
             css: allCSS,
             backgroundColor: bodyStyles.backgroundColor,
@@ -335,6 +355,20 @@ async function captureSnapshotInternal(cdp: CDPConnection): Promise<SnapshotDebu
                 // Convert vscode-file:// icons to base64 in both HTML and CSS
                 snapshot.html = convertVsCodeIcons(snapshot.html);
                 snapshot.css = convertVsCodeIcons(snapshot.css);
+
+                // Run generation probe in the MAIN world (no contextId) since the
+                // snapshot frame is a sub-frame that doesn't have the input box.
+                try {
+                    const probeResult = await cdp.call("Runtime.evaluate", {
+                        expression: GENERATION_PROBE_SCRIPT,
+                        returnByValue: true
+                    });
+                    const probeVal = probeResult?.result?.value;
+                    if (probeVal && !probeVal.error) {
+                        (snapshot as any).isGenerating = probeVal.isGenerating ?? false;
+                    }
+                } catch { /* generation probe is best-effort */ }
+
                 return { snapshot, errors, contexts };
             }
 
