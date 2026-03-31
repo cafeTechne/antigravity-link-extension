@@ -1,0 +1,431 @@
+openapi: 3.1.0
+info:
+  title: Antigravity Link API
+  description: |
+    Local HTTP API exposed by the Antigravity Link VS Code extension.
+    The server runs on your machine (default: https://localhost:3000) and is
+    authenticated with a Bearer token shown in the QR code URL.
+
+    All endpoints except `/ping` require an `Authorization: Bearer <token>` header.
+    The token is stored in the extension directory and printed in the QR code URL on first launch.
+  version: 1.0.13
+  license:
+    name: MIT
+    url: https://github.com/cafeTechne/antigravity-link-extension/blob/main/LICENSE.txt
+
+servers:
+  - url: https://localhost:3000
+    description: Default local server (self-signed certificate)
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    ControlMeta:
+      type: object
+      properties:
+        mode:
+          type: object
+          nullable: true
+          properties:
+            text: { type: string }
+            selector: { type: string }
+        model:
+          type: object
+          nullable: true
+          properties:
+            text: { type: string }
+            selector: { type: string }
+        stop:
+          type: object
+          nullable: true
+          properties:
+            selector: { type: string }
+        task:
+          type: object
+          nullable: true
+          properties:
+            text: { type: string }
+            selector: { type: string }
+        walkthrough:
+          type: object
+          nullable: true
+          properties:
+            text: { type: string }
+            selector: { type: string }
+        isGenerating:
+          type: boolean
+
+    Snapshot:
+      type: object
+      properties:
+        html:
+          type: string
+          description: Cleaned outerHTML of the active chat surface.
+        controlsHtml:
+          type: string
+          description: Full document.body.outerHTML for diagnostic use.
+        controlsMeta:
+          $ref: '#/components/schemas/ControlMeta'
+        isGenerating:
+          type: boolean
+          description: True when the AI is actively generating a response.
+        css:
+          type: string
+          description: Extracted stylesheet text from the IDE renderer.
+        backgroundColor:
+          type: string
+        color:
+          type: string
+        fontFamily:
+          type: string
+        themeClass:
+          type: string
+        colorScheme:
+          type: string
+          enum: [light, dark]
+
+    Instance:
+      type: object
+      properties:
+        id:
+          type: string
+          description: CDP target ID.
+        port:
+          type: integer
+          description: Remote debugging port of the Antigravity window.
+        url:
+          type: string
+        title:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+paths:
+  /ping:
+    get:
+      summary: Health check
+      description: Returns "pong". Does not require authentication.
+      security: []
+      responses:
+        '200':
+          description: Server is running.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: pong
+
+  /snapshot:
+    get:
+      summary: Get current chat snapshot
+      description: |
+        Returns the latest captured snapshot of the active Antigravity chat surface,
+        including rendered HTML, CSS, control metadata, and generation state.
+        Polled every 3 seconds by the mobile client via WebSocket broadcast.
+      responses:
+        '200':
+          description: Current snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Snapshot'
+        '503':
+          description: No snapshot available yet (CDP not connected or chat surface not found).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /instances:
+    get:
+      summary: List active Antigravity windows
+      description: |
+        Discovers all running Antigravity processes with `--remote-debugging-port` enabled
+        and returns them as switchable instances.
+      responses:
+        '200':
+          description: List of discovered instances.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  activeTargetId:
+                    type: string
+                    nullable: true
+                  activePort:
+                    type: integer
+                    nullable: true
+                  instances:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Instance'
+
+  /instance:
+    post:
+      summary: Switch active Antigravity window
+      description: Reinitialises the CDP connection to the specified target and triggers a snapshot broadcast.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetId]
+              properties:
+                targetId:
+                  type: string
+                  description: CDP target ID from GET /instances.
+      responses:
+        '200':
+          description: Successfully switched.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  activeTargetId: { type: string }
+                  activePort: { type: integer }
+        '400':
+          description: targetId missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: CDP switch failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /send:
+    post:
+      summary: Send a message to the active chat
+      description: |
+        Injects a text message into the Antigravity chat input and submits it.
+        Tries the VS Code command API first, falls back to CDP DOM injection.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  description: Text to inject and send.
+      responses:
+        '200':
+          description: Message sent.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  method:
+                    type: string
+                    description: Injection method used (vscode_command or cdp_dom).
+                  target: { type: string }
+        '400':
+          description: Message body missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: CDP not connected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /click:
+    post:
+      summary: Click a UI element in the active chat
+      description: |
+        Finds and clicks a DOM element in the active Antigravity window by selector,
+        text content, tag name, or approximate coordinates.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                selector:
+                  type: string
+                  description: CSS selector for the target element.
+                text:
+                  type: string
+                  description: Visible text content to match.
+                tag:
+                  type: string
+                  description: HTML tag name to filter candidates.
+                x:
+                  type: number
+                  description: Approximate X coordinate within the rendered surface.
+                y:
+                  type: number
+                  description: Approximate Y coordinate within the rendered surface.
+      responses:
+        '200':
+          description: Click dispatched.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  target: { type: string }
+        '404':
+          description: No matching element found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: CDP not connected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /stop:
+    post:
+      summary: Stop AI generation
+      description: |
+        Cancels the active AI generation. Attempts the Language Server RPC
+        (`CancelCascadeInvocation`) first, then always follows up with a direct
+        DOM click on the cancel button
+        (`[data-tooltip-id="input-send-button-cancel-tooltip"]`) for reliability.
+        Every call writes `ag-stop-probe.json` to the workspace root for diagnostics.
+      responses:
+        '200':
+          description: Stop attempted. Check `ag-stop-probe.json` for result details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  method:
+                    type: string
+                    enum: [rpc, dom, rpc+dom, none]
+
+  /upload:
+    post:
+      summary: Upload a file into the active chat
+      description: |
+        Accepts a multipart file upload, saves it to the `uploads/` directory,
+        and injects the file reference into the active Antigravity chat.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File uploaded and injected.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  filename: { type: string }
+                  path: { type: string }
+        '413':
+          description: File exceeds the configured size limit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: CDP not connected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /task:
+    get:
+      summary: Get the current task document
+      description: Reads `task.md.resolved` from the Antigravity brain directory.
+      responses:
+        '200':
+          description: Task content.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content: { type: string }
+                  path: { type: string }
+        '404':
+          description: Task file not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /walkthrough:
+    get:
+      summary: Get the current walkthrough document
+      description: Reads `walkthrough.md.resolved` from the Antigravity brain directory.
+      responses:
+        '200':
+          description: Walkthrough content.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Walkthrough file not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /plan:
+    get:
+      summary: Get the current implementation plan
+      description: |
+        Reads the plan document from the Antigravity brain directory.
+        Checks `implementation_plan.md.resolved`, `plan.md.resolved`,
+        `implementation_plan.md`, and `plan.md` in order.
+      responses:
+        '200':
+          description: Plan content.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content: { type: string }
+                  path: { type: string }
+        '404':
+          description: No plan file found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
