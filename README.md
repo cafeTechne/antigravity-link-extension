@@ -17,6 +17,15 @@ Open VSX: https://open-vsx.org/extension/cafetechne/antigravity-link-extension
 
 Bring your Antigravity sessions to your phone. Upload files, dictate prompts, stop generation, and control multiple active Antigravity chats from a mobile-friendly interface — or automate them via MCP or the local HTTP API.
 
+## MCP server + OpenAPI API
+
+Antigravity Link provides two automation surfaces for agent workflows:
+
+- **MCP server** (`mcp-server.mjs`) for MCP-compatible clients
+- **OpenAPI-spec'd local HTTP API** (`openapi.yaml`) for direct integrations
+
+This allows agents and automation tools to interact with live Antigravity IDE sessions for snapshot retrieval, prompt submission, stop generation, instance switching, and plan/task/walkthrough access.
+
 ## Who this is for
 
 - Teams who want a simple, secure mobile companion for Google's Antigravity IDE.
@@ -35,6 +44,36 @@ Bring your Antigravity sessions to your phone. Upload files, dictate prompts, st
 - MCP server for AI assistant integration (see [MCP server](#mcp-server)).
 - Local-only server with token authentication.
 - Interface available in 16 languages with automatic detection and RTL support.
+
+## For agent builders
+
+If you want to integrate quickly, use this sequence:
+
+1) Start the extension server and copy the token from the QR URL (`?token=...`).
+2) Use either MCP tools (`mcp-server.mjs`) or direct HTTP calls against `https://localhost:3000`.
+3) Validate control flow with `/snapshot`, `/send`, and `/stop`.
+
+OpenAPI example:
+
+```bash
+curl -k https://localhost:3000/snapshot \
+  -H "Authorization: Bearer <token>"
+```
+
+MCP client configuration example:
+
+```json
+{
+  "antigravity-link": {
+    "command": "node",
+    "args": ["/path/to/antigravity-link-extension/mcp-server.mjs"],
+    "env": {
+      "AG_BRIDGE_URL": "https://localhost:3000",
+      "AG_BRIDGE_TOKEN": "<token>"
+    }
+  }
+}
+```
 
 ## Demo photos
 
