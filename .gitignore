@@ -2,6 +2,7 @@ node_modules/
 out/
 uploads/
 .token
+.mcpregistry_github_token
 cert.pem
 key.pem
 *.vsix

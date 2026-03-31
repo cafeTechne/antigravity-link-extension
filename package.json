@@ -4,6 +4,7 @@
     "description": "Mobile upload and voice-to-text bridge for Antigravity",
     "icon": "icon.png",
     "version": "1.0.13",
+    "mcpName": "io.github.cafetechne/antigravity-link",
     "license": "MIT",
     "engines": {
         "vscode": "^1.90.0"

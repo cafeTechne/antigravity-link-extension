@@ -1,0 +1,37 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cafetechne/antigravity-link",
+  "title": "Antigravity Link",
+  "description": "MCP server and OpenAPI-backed mobile companion for controlling Antigravity IDE sessions",
+  "repository": {
+    "url": "https://github.com/cafeTechne/antigravity-link-extension",
+    "source": "github"
+  },
+  "version": "1.0.13",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "antigravity-link-extension",
+      "version": "1.0.13",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Base URL for the local Antigravity Link bridge server",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false,
+          "name": "AG_BRIDGE_URL"
+        },
+        {
+          "description": "Auth token from the Antigravity Link QR URL",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true,
+          "name": "AG_BRIDGE_TOKEN"
+        }
+      ]
+    }
+  ]
+}
