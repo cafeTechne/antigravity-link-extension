@@ -1,95 +1,263 @@
-# Antigravity Link (Extension VS Code)
 
+# Antigravity Link (extension VS Code)
+
+[![CI](https://github.com/cafeTechne/antigravity-link-extension/actions/workflows/ci.yml/badge.svg)](https://github.com/cafeTechne/antigravity-link-extension/actions/workflows/ci.yml)
 [![Open VSX Version](https://img.shields.io/open-vsx/v/cafetechne/antigravity-link-extension)](https://open-vsx.org/extension/cafetechne/antigravity-link-extension)
 [![Open VSX Downloads](https://img.shields.io/open-vsx/dt/cafetechne/antigravity-link-extension)](https://open-vsx.org/extension/cafetechne/antigravity-link-extension)
+[![npm version](https://img.shields.io/npm/v/antigravity-link-extension)](https://www.npmjs.com/package/antigravity-link-extension)
+[![npm downloads](https://img.shields.io/npm/dw/antigravity-link-extension)](https://www.npmjs.com/package/antigravity-link-extension)
 [![GitHub Stars](https://img.shields.io/github/stars/cafeTechne/antigravity-link-extension)](https://github.com/cafeTechne/antigravity-link-extension/stargazers)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Lire dans votre langue :**
+**Lisez ceci dans votre langue :**
 [日本語](README.ja.md) · [中文（简体）](README.zh-CN.md) · [中文（繁體）](README.zh-TW.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Polski](README.pl.md) · [Türkçe](README.tr.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [العربية](README.ar.md)
+
+> **Quoi de neuf dans la version 1.0.13** — Arrêtez la génération à partir d'un mobile, serveur MCP + spécification OpenAPI, interface utilisateur en 15 langues, améliorations du téléchargement de fichiers. Voir [CHANGELOG](CHANGELOG.md).
 
 ---
 
-Dépôt GitHub : https://github.com/cafeTechne/antigravity-link-extension
+## Contenu
 
-Open VSX : https://open-vsx.org/extension/cafetechne/antigravity-link-extension
+- [Démo](#démo)
+- [Ce que vous obtenez](#ce-que-vous-obtenez)
+- [Installation](#installation)
+- [Conditions préalables](#conditions-préalables)
+- [Démarrage rapide](#démarrage-rapide)
+- [Commandes](#commandes)
+- [Paramètres](#paramètres)
+- [Pour les constructeurs d'agents](#pour-les-constructeurs-dagents)
+- [Comment ça marche](#comment-ça-marche-haut-niveau)
+- [Sécurité du compte](#sécurité-du-compte)
+- [Dépannage](#dépannage)
+- [FAQ](#faq)
+- [Internationalisation et accessibilité](#internationalisation-et-accessibilité)
+- [Contribuer](#contribuer)
+- [Référence API](#api)
+- [Référence du serveur MCP](#serveur-mcp)
 
-Accédez à vos sessions Antigravity depuis votre téléphone. Téléversez des fichiers, dictez des prompts, arrêtez la génération et gérez plusieurs chats Antigravity actifs depuis une interface adaptée au mobile — ou automatisez-les via MCP ou l'API HTTP locale.
+---
 
-## À qui s'adresse cette extension ?
+Vous exécutez une session Antigravity et devez vous éloigner de votre bureau. L’IA est de mi-génération. Vous souhaitez le surveiller, le rediriger, télécharger un fichier ou simplement lire ce qu'il a écrit, depuis votre téléphone, sans revenir sur votre ordinateur.
 
-- Les équipes souhaitant un compagnon mobile simple et sécurisé pour l'IDE Antigravity de Google.
-- Les utilisateurs avancés qui veulent des téléversements rapides et la saisie vocale en déplacement.
-- Les développeurs souhaitant automatiser ou intégrer des sessions Antigravity via API ou MCP.
-- Les développeurs débutants voulant interagir avec une session Antigravity en cours sans aucune configuration.
+Antigravity Link rend cela possible. Scannez un code QR et votre téléphone devient un miroir en direct du chat actif : lisez les réponses pendant leur diffusion, envoyez des messages, arrêtez la génération, téléchargez des fichiers, dictez par la voix et basculez entre plusieurs fenêtres Antigravity, le tout à partir d'un navigateur mobile, sur votre réseau local.
+
+Pour l'automatisation, l'extension expose également une API HTTP locale et un serveur MCP afin que les agents et les outils externes puissent piloter les sessions Antigravity par programme.
+
+## Démo
+
+https://github.com/user-attachments/assets/43c7d029-a598-474f-949e-5da333c9a3f2
+
+<details>
+<summary>Captures d'écran</summary>
+
+| | | |
+| --- | --- | --- |
+| ![Demo 1](https://raw.githubusercontent.com/cafeTechne/antigravity-link-extension/main/demo_photos/1769391120745-IMG_0857.png) | ![Demo 2](https://raw.githubusercontent.com/cafeTechne/antigravity-link-extension/main/demo_photos/1769391144709-IMG_0856.png) | ![Demo 3](https://raw.githubusercontent.com/cafeTechne/antigravity-link-extension/main/demo_photos/1769391155346-IMG_0855.png) |
+| ![Demo 4](https://raw.githubusercontent.com/cafeTechne/antigravity-link-extension/main/demo_photos/1769391162186-IMG_0854.png) | ![Demo 5](https://raw.githubusercontent.com/cafeTechne/antigravity-link-extension/main/demo_photos/1769391172827-IMG_0853.png) | ![Demo 6](https://raw.githubusercontent.com/cafeTechne/antigravity-link-extension/main/demo_photos/1769391181215-IMG_0852.png) |
+| ![Demo 7](https://raw.githubusercontent.com/cafeTechne/antigravity-link-extension/main/demo_photos/1769391189291-IMG_0851.png) | | |
+
+</details>
 
 ## Ce que vous obtenez
 
-- Miroir en direct du chat Antigravity actif — lisez et interagissez depuis votre téléphone.
-- Téléversement de fichiers dans le chat Antigravity actif.
-- Saisie vocale depuis le mobile (HTTPS requis pour les permissions du microphone).
-- Arrêt de la génération depuis votre téléphone avec un bouton dédié.
-- Basculement entre les instances actives pour plusieurs fenêtres Antigravity.
-- API HTTP locale pour l'automatisation et les intégrations.
-- Serveur MCP pour l'intégration d'assistants IA.
-- Serveur local uniquement avec authentification par token.
+- Miroir en direct du chat Antigravity actif : lisez et interagissez depuis votre téléphone.
+- Téléchargez le fichier dans le chat Antigravity actif.
+- Saisie voix-texte depuis un mobile (HTTPS requis pour les autorisations du micro).
+- Arrêtez la génération depuis votre téléphone avec une puce d'arrêt dédiée.
+- Commutation d'instance active pour plusieurs fenêtres Antigravity.
+- API HTTP locale pour l'automatisation et les intégrations (voir [API](#api)).
+- Serveur MCP pour l'intégration de l'assistant AI (voir [MCP server](#mcp-server)).
+- Serveur local uniquement avec authentification par jeton.
 - Interface disponible en 16 langues avec détection automatique et support RTL.
+
+## Installation
+
+Installez à partir du marché des extensions Antigravity – recherchez **Antigravity Link** – ou [install directly from Open VSX](https://open-vsx.org/extension/cafetechne/antigravity-link-extension).
+
+## Conditions préalables
+
+- **Antigravity IDE** installé et en cours d'exécution.
+- **Un téléphone et un ordinateur sur le même réseau Wi-Fi.**
+- **Antigravity lancé avec l'indicateur de débogage à distance.** Ceci est requis pour que l'extension découvre et se connecte à votre session. Voir la commande de lancement dans Démarrage rapide ci-dessous.
 
 ## Démarrage rapide
 
-1) Démarrez Antigravity avec le débogage distant activé. C'est indispensable ; les sessions lancées sans ce paramètre ne sont pas détectables par l'extension.
+1) Démarrez Antigravity avec le débogage à distance activé. Ceci est obligatoire ; les sessions lancées sans cet indicateur ne sont pas détectables par l'extension.
 
-Exemple (Windows) :
+**Windows** (raccourci du menu Démarrer) :
 ```powershell
 & "C:\Users\<username>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Antigravity\Antigravity.lnk" --remote-debugging-port=9000
 ```
 
-2) Dans VS Code, exécutez : `Antigravity Link: Start Server`
+**macOS :**
+```bash
+open -a Antigravity --args --remote-debugging-port=9000
+```
 
-3) Puis exécutez : `Antigravity Link: Show QR Code`
+**Linux :**
+```bash
+antigravity --remote-debugging-port=9000
+```
 
-4) Scannez le QR code avec votre téléphone. L'interface mobile est prête.
+Plusieurs sessions Antigravity sont prises en charge, mais chaque fenêtre doit être lancée avec cette commande.
 
-5) Votre téléphone peut avertir que la connexion n'est pas sécurisée, car le certificat est auto-signé. C'est attendu pour HTTPS local. Utilisez l'option « Avancé » de votre navigateur pour continuer.
+2) Dans VS Code, exécutez :
+`Antigravity Link: Start Server`
+
+3) Puis exécutez :
+`Antigravity Link: Show QR Code`
+
+4) Scannez le code QR avec votre téléphone. Votre interface utilisateur mobile est prête.
+
+5) Votre téléphone peut vous avertir que la connexion n'est pas sécurisée car le certificat est auto-signé. Ceci est attendu pour le HTTPS local. Utilisez l'option « Avancé » de votre navigateur ou une option similaire pour continuer (la formulation diffère entre Safari/Chrome/Firefox).
 
 ## Commandes
 
 | Commande | Description |
 | --- | --- |
-| Antigravity Link: Start Server | Démarre le serveur bridge local. |
+| Antigravity Link: Start Server | Démarre le serveur de pont local. |
 | Antigravity Link: Stop Server | Arrête le serveur. |
-| Antigravity Link: Show QR Code | Affiche le QR code de connexion. |
-| Antigravity Link: Select Network Interface | Choisit l'interface réseau annoncée dans l'URL du QR. |
+| Antigravity Link: Show QR Code | Affiche le code de connexion QR. |
+| Antigravity Link: Select Network Interface | Choisissez l'interface réseau annoncée par l'URL QR. |
 
-## API
+## Paramètres
 
-L'extension expose une API HTTP locale sur `https://localhost:3000`. Tous les points de terminaison sauf `/ping` nécessitent un en-tête `Authorization: Bearer <token>`.
-
-| Méthode | Point de terminaison | Description |
+| Paramètre | Défaut | Description |
 | --- | --- | --- |
-| GET | `/ping` | Vérification de l'état. Aucune authentification requise. |
-| GET | `/snapshot` | Interface de chat actuelle : HTML, CSS, mode/modèle, isGenerating. |
-| GET | `/instances` | Liste les fenêtres Antigravity actives. |
-| POST | `/instance` | Change la fenêtre active. Corps : `{ "targetId": "..." }` |
-| POST | `/send` | Envoie un message. Corps : `{ "message": "..." }` |
-| POST | `/click` | Clique sur un élément d'interface. Corps : `{ "selector"?, "text"?, "x"?, "y"? }` |
-| POST | `/stop` | Arrête la génération IA. |
-| POST | `/upload` | Téléverse un fichier (multipart/form-data). |
-| GET | `/task` | Lit le document de tâche en cours. |
-| GET | `/walkthrough` | Lit le document de procédure en cours. |
-| GET | `/plan` | Lit le plan d'implémentation en cours. |
+| `antigravityLink.port` | `3000` | Port pour le serveur de pont local. |
+| `antigravityLink.autoStart` | `false` | Démarrez le serveur au lancement de VS Code. |
+| `antigravityLink.useHttps` | `true` | Servir sur HTTPS pour l'accès au micro. |
+| `antigravityLink.preferredHost` | `""` | LAN IPv4 en option pour annoncer dans l'URL QR (exemple : `192.168.1.101`). |
+| `antigravityLink.strictWorkbenchOnly` | `true` | Liez-vous uniquement aux cibles `workbench.html` CDP pour plus de stabilité. |
+| `antigravityLink.includeFallbackTargets` | `false` | Autoriser les cibles de secours du jetski/lancement lorsque le mode strict est désactivé. |
 
-Schéma complet : [`openapi.yaml`](openapi.yaml)
+## Pour les constructeurs d'agents
 
-## Serveur MCP
+Si vous souhaitez intégrer rapidement, utilisez cette séquence :
 
-Ajoutez à la configuration de votre client MCP :
+1) Démarrez le serveur d'extension et copiez le jeton à partir de l'URL QR (`?token=...`).
+2) Utilisez soit les outils MCP (`mcp-server.mjs`), soit des appels HTTP directs vers `https://localhost:3000`.
+3) Validez le flux de contrôle avec `/snapshot`, `/send` et `/stop`.
+
+Exemple OpenAPI :
+
+```bash
+curl -k https://localhost:3000/snapshot \
+  -H "Authorization: Bearer <token>"
+```
+
+Exemple de configuration client MCP :
 
 ```json
 {
   "antigravity-link": {
     "command": "node",
-    "args": ["/path/to/antigravity-link-extension/mcp-server.mjs"],
+    "args": ["<extension-dir>/mcp-server.mjs"],
+    "env": {
+      "AG_BRIDGE_URL": "https://localhost:3000",
+      "AG_BRIDGE_TOKEN": "<token>"
+    }
+  }
+}
+```
+
+Remplacez `<extension-dir>` par le chemin d'accès à l'extension installée :
+- **Windows :** `%USERPROFILE%\.antigravity\extensions\cafetechne.antigravity-link-extension-1.0.13`
+- **macOS/Linux :** `~/.antigravity/extensions/cafetechne.antigravity-link-extension-1.0.13`
+
+## Comment ça marche (haut niveau)
+
+- L'extension démarre un serveur local (HTTP ou HTTPS).
+- Il découvre les cibles Antigravity via le protocole Chrome DevTools (CDP).
+- Votre téléphone se connecte à l'interface utilisateur mobile et envoie des demandes de téléchargement/commande.
+- L'extension s'injecte dans la cible de discussion sélectionnée et enregistre les fichiers sur `uploads/`.
+
+## Sécurité du compte
+
+Antigravity Link n’a aucun cas d’interdiction connu et est conçu pour le rester.
+
+L'extension fonctionne en se connectant à un port de débogage que Antigravity expose sur votre propre machine – le même protocole Chrome DevTools utilisé par le débogueur et les outils de développement de navigateur intégrés de VS Code. Il lit votre interface utilisateur locale et simule les pressions et les clics sur les touches, exactement comme si vous étiez assis devant votre clavier.
+
+Ce que cela signifie en pratique :
+- **Aucune demande n'est adressée aux serveurs de Google** au-delà de ce que Antigravity envoie déjà. L'extension n'a pas d'accès au réseau en dehors de votre réseau local.
+- **Rien n'est injecté dans le trafic réseau de Antigravity.** L'extension lit votre écran et tape dans votre éditeur — elle n'intercepte ni ne modifie les appels API.
+- **Aucun fichier Antigravity n'est modifié.** Il n'y a aucun correctif, hook ou modification binaire.
+- **Le serveur s'exécute entièrement sur votre ordinateur.** Vos invites, votre historique de discussion et vos fichiers ne quittent jamais votre réseau local, sauf si vous exposez explicitement le serveur en externe.
+- **Aucune donnée n'est envoyée à des services tiers** par cette extension.
+
+Le code source est sous licence MIT et entièrement auditable : https://github.com/cafeTechne/antigravity-link-extension
+
+## Dépannage
+
+- **Aucune instance trouvée** : assurez-vous que chaque fenêtre Antigravity a été lancée avec la commande `--remote-debugging-port` indiquée ci-dessus.
+- **Impossible de se connecter depuis un mobile** : assurez-vous que votre téléphone et votre ordinateur sont sur le même réseau.
+- **Les téléchargements sont enregistrés mais n'apparaissent pas dans le chat** : passez à l'instance active appropriée dans l'interface utilisateur mobile.
+- **Bloqué sur « Initialisation… »** : Le serveur est accessible mais la surface de discussion n'a pas encore été capturée. Attendez quelques secondes que la connexion CDP s'initialise.
+
+## FAQ
+
+**Est-ce que cela fonctionne sur iOS et Android ?**
+Oui. L'interface utilisateur mobile fonctionne dans n'importe quel navigateur mobile moderne : Safari sur iOS, Chrome sur Android et d'autres fonctionnent tous.
+
+**Est-ce que cela fonctionne sur cellulaire ou VPN ?**
+Pas par défaut : le serveur est uniquement LAN. Pour un accès à distance, vous devrez l'exposer via un tunnel tel que ngrok. L'authentification par jeton et HTTPS restent en place malgré tout.
+
+**L'avertissement du certificat auto-signé peut-il être accepté en toute sécurité ?**
+Oui. Le certificat est généré localement sur votre machine au démarrage du serveur. L'avertissement apparaît car il n'est pas émis par une autorité de certification publique, et non parce que la connexion n'est pas sécurisée.
+
+**Puis-je l'utiliser pour l'automatisation ?**
+Oui. L'API HTTP locale et le serveur MCP sont conçus exactement pour cela. Voir les sections [API](#api) et [MCP server](#mcp-server).
+
+## Internationalisation et accessibilité
+
+L'interface mobile détecte automatiquement la langue de votre navigateur et s'affiche dans :
+
+English · 日本語 · 中文（简体）· 中文（繁體）· 한국어 · Deutsch · Français · Español · Português · Русский · Italiano · Polski · Türkçe · Tiếng Việt · Bahasa Indonesia · العربية
+
+L’arabe est automatiquement rendu de droite à gauche. La détection de langue utilise `navigator.language` sans configuration requise.
+
+L'interface est construite avec du HTML sémantique, des rôles ARIA, des régions `aria-live` pour l'état de connexion, la navigation au clavier et des étiquettes compatibles avec les lecteurs d'écran.
+
+## Contribuer
+
+Les demandes de tirage sont les bienvenues. Vérifiez les TODO dans la base de code ou ouvrez un ticket GitHub pour discuter des idées avant de commencer des modifications importantes.
+Voir `CONTRIBUTING.md` pour les notes de configuration et de relations publiques.
+
+---
+
+## API
+
+L'extension expose une API HTTP locale sur `https://localhost:3000` (ou sur votre port configuré). Tous les points de terminaison, à l'exception de `/ping`, nécessitent un en-tête `Authorization: Bearer <token>`. Le jeton est la valeur après `?token=` dans l'URL du code QR.
+
+| Méthode | Point de terminaison | Description |
+| --- | --- | --- |
+| OBTENIR | `/ping` | Bilan de santé : renvoie `pong`. Aucune authentification requise. |
+| OBTENIR | `/snapshot` | Surface de discussion actuelle : HTML, CSS, mode/modèle, `isGenerating`. |
+| OBTENIR | `/instances` | Liste les fenêtres Antigravity actives. |
+| POSTE | `/instance` | Changer de fenêtre active. Corps : `{ "targetId": "..." }` |
+| POSTE | `/send` | Envoyer un message. Corps : `{ "message": "..." }` |
+| POSTE | `/click` | Cliquez sur un élément de l'interface utilisateur. Corps : `{ "selector"?, "text"?, "x"?, "y"? }` |
+| POSTE | `/stop` | Arrêtez la génération d’IA. |
+| POSTE | `/upload` | Téléchargez un fichier (multipart/form-data, nom de champ `file`). |
+| OBTENIR | `/task` | Lisez le document de tâche actuel. |
+| OBTENIR | `/walkthrough` | Lisez le document pas à pas actuel. |
+| OBTENIR | `/plan` | Lisez le plan de mise en œuvre actuel. |
+
+Schéma complet : [`openapi.yaml`](openapi.yaml)
+
+## Serveur MCP
+
+Antigravity Link est livré avec un serveur MCP (Model Context Protocol) qui permet aux assistants IA de piloter directement votre session Antigravity.
+
+**Installation**
+
+Ajoutez les éléments suivants à la configuration de votre client MCP (par exemple `claude_desktop_config.json`) :
+
+```json
+{
+  "antigravity-link": {
+    "command": "node",
+    "args": ["<extension-dir>/mcp-server.mjs"],
     "env": {
       "AG_BRIDGE_URL": "https://localhost:3000",
       "AG_BRIDGE_TOKEN": "<your-token>"
@@ -98,32 +266,41 @@ Ajoutez à la configuration de votre client MCP :
 }
 ```
 
-Outils disponibles : `get_snapshot`, `send_message`, `stop_generation`, `get_instances`, `switch_instance`, `click_element`, `get_task`, `get_walkthrough`, `get_plan`
+Remplacez `<extension-dir>` par le chemin d'accès à l'extension installée :
+- **Windows :** `%USERPROFILE%\.antigravity\extensions\cafetechne.antigravity-link-extension-1.0.13`
+- **macOS/Linux :** `~/.antigravity/extensions/cafetechne.antigravity-link-extension-1.0.13`
 
-## Sécurité et confidentialité
+Le jeton est la valeur après `?token=` dans l'URL du code QR. Le serveur d'extension doit être en cours d'exécution avant la connexion du client MCP.
 
-- Le serveur s'exécute localement et est authentifié par token.
-- HTTPS est activé par défaut pour permettre l'accès au microphone sur mobile.
-- Cette extension n'envoie aucune donnée à des services tiers.
+**Outils disponibles**
 
-## Dépannage
+| Outil | Description |
+| --- | --- |
+| `get_snapshot` | Obtenez l'état actuel du chat, le mode, le modèle et l'état de génération. |
+| `send_message` | Envoyez un message au chat actif. |
+| `stop_generation` | Annulez la génération d’IA active. |
+| `get_instances` | Liste les fenêtres Antigravity disponibles. |
+| `switch_instance` | Basculez vers une autre fenêtre Antigravity. |
+| `click_element` | Cliquez sur un élément de l'interface utilisateur par sélecteur, texte ou coordonnées. |
+| `get_task` | Lisez le document de tâche actuel. |
+| `get_walkthrough` | Lisez le document pas à pas actuel. |
+| `get_plan` | Lisez le plan de mise en œuvre actuel. |
 
-- **Aucune instance trouvée** : Assurez-vous que chaque fenêtre Antigravity a été lancée avec `--remote-debugging-port`.
-- **Impossible de se connecter depuis le mobile** : Vérifiez que votre téléphone et votre ordinateur sont sur le même réseau.
-- **Bloqué sur « Initialisation… »** : Attendez quelques secondes le temps que la connexion CDP s'initialise.
+## Actifs autonomes ou d'espace de travail
 
-## Internationalisation et accessibilité
+Cette extension est autonome. Il est livré avec ses propres actifs `public/` et son dossier `uploads/` et ne nécessite pas la version parent `npm run dev`.
 
-L'interface mobile détecte automatiquement la langue de votre navigateur et s'affiche en :
-English · 日本語 · 中文（简体）· 中文（繁體）· 한국어 · Deutsch · Français · Español · Português · Русский · Italiano · Polski · Türkçe · Tiếng Việt · Bahasa Indonesia · العربية
+Si votre *espace de travail* contient `public/` ou `uploads/`, l'extension préférera automatiquement ces chemins. Cela facilite la personnalisation de l'interface utilisateur mobile ou la conservation des téléchargements à la racine de votre projet, mais cela signifie également que le comportement peut différer selon les espaces de travail.
 
-L'arabe est rendu de droite à gauche. La détection de langue utilise `navigator.language` sans aucune configuration requise.
+---
 
-## Contribuer
+## Histoire des étoiles
 
-Nous acceptons les pull requests et recherchons activement des contributeurs.
-Consultez `CONTRIBUTING.md` pour les instructions de configuration et les notes sur les PR.
+[![Star History Chart](https://api.star-history.com/svg?repos=cafeTechne/antigravity-link-extension&type=Date&theme=dark)](https://star-history.com/#cafeTechne/antigravity-link-extension&Date)
 
-## Licence
+## Remerciements
 
-MIT. Voir `LICENSE`.
+Inspiré par les premiers projets communautaires, notamment :
+- https://github.com/Mario4272/ag_bridge
+- https://github.com/gherghett/Antigravity-Shit-Chat
+- https://github.com/lukasz-wronski/Antigravity-Shit-Chat
