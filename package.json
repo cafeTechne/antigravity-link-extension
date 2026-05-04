@@ -3,7 +3,7 @@
     "displayName": "Antigravity Link",
     "description": "Mobile upload and voice-to-text bridge for Antigravity",
     "icon": "icon.png",
-    "version": "1.0.13",
+    "version": "1.0.14",
     "mcpName": "io.github.cafeTechne/antigravity-link",
     "files": [
         "out/**",
@@ -118,11 +118,12 @@
         "@types/vscode": "^1.90.0",
         "@types/ws": "^8.5.10",
         "chai": "^6.2.2",
+        "esbuild": "^0.20.2",
         "mocha": "^11.7.5",
+        "playwright": "^1.59.1",
         "ts-node": "^10.9.2",
         "typescript": "^5.4.5",
-        "vsce": "^2.15.0",
-        "esbuild": "^0.20.2"
+        "vsce": "^2.15.0"
     },
     "dependencies": {
         "@types/multer": "^1.4.11",

@@ -203,8 +203,18 @@ const CAPTURE_SCRIPT = `(() => {
             const clone = cascade.cloneNode(true);
             const composer = clone.querySelector('[data-lexical-editor="true"][contenteditable="true"], [contenteditable="true"][role="textbox"]');
             if (composer) {
-                const removable = composer.closest('form, [class*="composer"], [id*="input"], [id*="composer"]')
-                    || composer.closest('div[id^="cascade"] > div, div[id^="conversation"] > div, div[id^="chat"] > div');
+                // Case-insensitive [id*="input" i] catches antigravity.agentSidePanelInputBox.
+                const removableByClass = composer.closest('form, [class*="composer"], [id*="input" i], [id*="composer"]');
+                // Only use the cascade>child fallback if the cascade has multiple direct children.
+                // With a single child, that child contains both messages AND the composer — removing
+                // it would wipe all message content from the snapshot.
+                const cascadeChild = composer.closest(
+                    'div[id^="cascade"] > div, div[id^="conversation"] > div, div[id^="chat"] > div'
+                );
+                const cascadeChildSafe = cascadeChild &&
+                    cascadeChild.parentElement &&
+                    cascadeChild.parentElement.children.length > 1 ? cascadeChild : null;
+                const removable = removableByClass || cascadeChildSafe;
                 if (removable && removable !== clone) removable.remove();
             }
             cleanHtml = clone.outerHTML;

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.14
+
+### Critical Bug Fixes (Google Chat Layout Change)
+
+- Fixed snapshot capture failure caused by Google's chat container rename from `#cascade` to `#conversation`.
+- Fixed empty HTML snapshots by adding a guard to the composer-removal logic; it now only removes the parent container if multiple children exist, preventing the entire conversation from being nuked in the new single-child DOM structure.
+- Enabled case-insensitive matching for the input box ID (`antigravity.agentSidePanelInputBox`) to ensure it is reliably removed from snapshots without affecting other content.
+
 ## 1.0.13
 
 ### Stop Generation
