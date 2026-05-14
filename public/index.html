@@ -1390,6 +1390,10 @@
             let out = String(htmlText);
 
             out = out.replace(/\b(src|href)\s*=\s*(['"])([^'"]+)\2/gi, (full, attr, quote, value) => {
+                if (value.includes('/Applications/Antigravity.app/Contents/Resources/app/extensions/theme-symbols/src/')) {
+                    const relativePath = value.replace('/Applications/Antigravity.app/Contents/Resources/app/extensions/theme-symbols/src/', '/src/');
+                    return `${attr}=${quote}${relativePath}${quote}`;
+                }
                 if (!isLocalAssetUrl(value)) return full;
                 return `${attr}=${quote}${TRANSPARENT_PIXEL}${quote}`;
             });
