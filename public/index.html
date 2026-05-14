@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
     <meta name="theme-color" content="#141218">
     <title>Antigravity Link</title>
     <style>
@@ -1441,6 +1442,19 @@
                 }
 
                 ${hoistedCss}
+                /* ── Google Material Symbols font fix ── */
+                .google-symbols {
+                    font-family: 'Material Symbols Outlined' !important;
+                    font-weight: normal;
+                    font-style: normal;
+                    line-height: 1;
+                    letter-spacing: normal;
+                    text-transform: none;
+                    white-space: nowrap;
+                    font-feature-settings: 'liga';
+                    -webkit-font-feature-settings: 'liga';
+                    -webkit-font-smoothing: antialiased;
+                }
                 /* ── Force mobile viewport compliance ── */
                 #mirrorContent,
                 #mirrorContent > * {
