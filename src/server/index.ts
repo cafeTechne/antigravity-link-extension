@@ -377,6 +377,17 @@ export class AntigravityServer {
                 if (!this.isSnapshotUsable(snapshot)) {
                     console.log('[TRACE] snapshot.rejected unusable surface');
                     this.state.missedSnapshots += 1;
+                    // If we were broadcasting isGenerating:true but the cancel button is
+                    // no longer visible in this (unusable) snapshot, clear stop state now
+                    // rather than waiting for reinit (which takes 3+ poll cycles).
+                    if (this.state.lastBroadcastIsGenerating && !(snapshot as any).isGenerating) {
+                        this.isGeneratingTracker.reset();
+                        this.state.lastBroadcastIsGenerating = false;
+                        if (this.state.lastSnapshot) {
+                            (this.state.lastSnapshot as any).isGenerating = false;
+                            this.broadcastSnapshot(this.state.lastSnapshot);
+                        }
+                    }
                     return false;
                 }
                 const hash = this.hashString(snapshot.html);

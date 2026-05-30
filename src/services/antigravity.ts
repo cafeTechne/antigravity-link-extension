@@ -693,7 +693,11 @@ export async function clickElement(
     return { success: false, reason: 'Could not find element' };
 }
 
-// Robust Strategy: UI Interaction + File Chooser Interception
+// Text patterns for "Add context"-style buttons (broadened to survive UI renames).
+const ADD_CTX_PATTERNS = ['add context', 'add file', 'attach', 'upload context', 'context'];
+// Text/aria patterns for the file/media sub-menu item.
+const MEDIA_PATTERNS = ['media', 'file', 'files', 'image', 'images', 'photo', 'document', 'upload'];
+
 export async function injectFile(cdp: CDPConnection, filePath: string, targetSelector?: string): Promise<InjectResult> {
     console.log(`[injectFile] Attempting injection for ${filePath} (selector: ${targetSelector || 'auto'})`);
 
@@ -702,14 +706,31 @@ export async function injectFile(cdp: CDPConnection, filePath: string, targetSel
         await cdp.call("DOM.enable", {});
         await cdp.call("Page.setInterceptFileChooserDialog", { enabled: true });
 
-        // Try to locate a context with "Add context" UI
+        // Strategy 1: direct file-input injection — doesn't rely on UI button labels at all.
+        // Try this first; it works when Antigravity pre-renders the input in the DOM.
+        for (const ctx of cdp.contexts) {
+            const direct = await tryDirectInputInjection(cdp, ctx.id, filePath, targetSelector);
+            if (direct.ok) {
+                console.log(`   [ctx:${ctx.id}] Direct injection succeeded`);
+                return direct;
+            }
+        }
+
+        // Strategy 2: UI interaction — find the attachment-opener button, click it,
+        // then click the file/media sub-menu item, then inject into the revealed input.
         let targetCtxId: number | null = null;
 
         for (const ctx of cdp.contexts) {
             const res = await cdp.call("Runtime.evaluate", {
                 expression: `(() => {
-                    const btn = Array.from(document.querySelectorAll('div, button')).find(el => (el.innerText || '').toLowerCase().includes('add context'));
-                    return !!btn;
+                    const patterns = ${JSON.stringify(ADD_CTX_PATTERNS)};
+                    const el = Array.from(document.querySelectorAll('div, button, [role="button"]')).find(el => {
+                        const text = (el.innerText || el.textContent || '').toLowerCase().trim();
+                        const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+                        const tip  = (el.getAttribute('data-tooltip-id') || el.getAttribute('data-testid') || '').toLowerCase();
+                        return patterns.some(p => text.includes(p) || aria.includes(p) || tip.includes(p));
+                    });
+                    return !!el;
                 })()`,
                 contextId: ctx.id,
                 returnByValue: true
@@ -720,58 +741,70 @@ export async function injectFile(cdp: CDPConnection, filePath: string, targetSel
             }
         }
 
-        // Fallback: if we didn't find the UI, try direct file input in any context
         if (!targetCtxId) {
-            for (const ctx of cdp.contexts) {
-                const direct = await tryDirectInputInjection(cdp, ctx.id, filePath, targetSelector);
-                if (direct.ok) return direct;
-            }
+            console.log('   No attachment-opener button found in any context');
             return { ok: false, reason: 'ui_not_found' };
         }
 
-        console.log(`   [ctx:${targetCtxId}] Found UI context. Initiating click sequence...`);
+        console.log(`   [ctx:${targetCtxId}] Found attachment-opener. Clicking...`);
 
-        // Execute Click Sequence
-        const interactionResult = await cdp.call("Runtime.evaluate", {
+        const clickResult = await cdp.call("Runtime.evaluate", {
             expression: `(async () => {
                 try {
-                    const buttons = Array.from(document.querySelectorAll('div, button'));
-                    const addContextBtn = buttons.find(el => (el.innerText || '').includes('Add context'));
-                    if (!addContextBtn) return 'no_add_btn';
-                    
-                    addContextBtn.click();
-                    await new Promise(r => setTimeout(r, 600)); // Wait for menu animation
-                    
-                    const mediaBtn = Array.from(document.querySelectorAll('div, button'))
-                                    .find(el => (el.innerText || '').trim() === 'Media' && el.offsetParent !== null);
-                    
-                    if (mediaBtn) {
-                        mediaBtn.click();
-                        return 'clicked_media';
+                    const addPatterns  = ${JSON.stringify(ADD_CTX_PATTERNS)};
+                    const filePatterns = ${JSON.stringify(MEDIA_PATTERNS)};
+
+                    const opener = Array.from(document.querySelectorAll('div, button, [role="button"]')).find(el => {
+                        const text = (el.innerText || el.textContent || '').toLowerCase().trim();
+                        const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+                        const tip  = (el.getAttribute('data-tooltip-id') || el.getAttribute('data-testid') || '').toLowerCase();
+                        return addPatterns.some(p => text.includes(p) || aria.includes(p) || tip.includes(p));
+                    });
+                    if (!opener) return 'no_opener';
+                    opener.click();
+                    await new Promise(r => setTimeout(r, 700));
+
+                    // Find the visible file/media sub-menu item — prefer exact match first.
+                    const candidates = Array.from(document.querySelectorAll(
+                        'div, button, [role="button"], [role="menuitem"], [role="option"], li'
+                    )).filter(el => el.offsetParent !== null);
+
+                    const fileBtn = candidates.find(el => {
+                        const text = (el.innerText || el.textContent || '').trim().toLowerCase();
+                        const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+                        return filePatterns.some(p => text === p || aria === p);
+                    }) || candidates.find(el => {
+                        const text = (el.innerText || el.textContent || '').trim().toLowerCase();
+                        const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+                        return filePatterns.some(p => text.includes(p) || aria.includes(p));
+                    });
+
+                    if (fileBtn) {
+                        const label = (fileBtn.textContent || '').trim();
+                        fileBtn.click();
+                        return 'clicked:' + label;
                     }
-                    return 'media_not_found';
-                } catch(e) { return e.toString(); }
+                    return 'file_btn_not_found';
+                } catch(e) { return 'error:' + e.toString(); }
             })()`,
             contextId: targetCtxId,
             awaitPromise: true
         });
-        console.log(`   UI Click sequence result: ${interactionResult.result?.value}`);
+        console.log(`   UI click result: ${clickResult.result?.value}`);
 
-        // Try to find the file input with retries (menu animation latency)
-        for (let attempt = 0; attempt < 5; attempt++) {
+        // Retry loop: wait for the file input to appear after the menu animation.
+        for (let attempt = 0; attempt < 6; attempt++) {
             const findInputRes = await cdp.call("Runtime.evaluate", {
                 expression: `(() => {
-                     const selector = ${JSON.stringify(targetSelector || '')};
-                     let input = null;
-                     if (selector) {
-                        try { input = document.querySelector(selector); } catch(e) {}
-                     }
-                     if (!input) {
+                    const selector = ${JSON.stringify(targetSelector || '')};
+                    let input = null;
+                    if (selector) { try { input = document.querySelector(selector); } catch(e) {} }
+                    if (!input) {
                         const inputs = Array.from(document.querySelectorAll('input[type="file"]'));
                         input = inputs.find(i => i.offsetParent !== null) || inputs[0];
-                     }
-                     return input ? (input.dataset.agId = 'ag-' + Date.now()) : null;
-                 })()`,
+                    }
+                    return input ? (input.dataset.agId = 'ag-' + Date.now()) : null;
+                })()`,
                 contextId: targetCtxId,
                 returnByValue: true
             });
@@ -782,20 +815,12 @@ export async function injectFile(cdp: CDPConnection, filePath: string, targetSel
                     expression: `document.querySelector('[data-ag-id="${uid}"]')`,
                     contextId: targetCtxId
                 });
-
-                if (ret.result && ret.result.objectId) {
+                if (ret.result?.objectId) {
                     const ok = await setFilesAndDispatch(cdp, ret.result.objectId, filePath);
                     if (ok) return { ok: true, method: 'ui_interaction_injection' };
                 }
             }
-
-            await new Promise(r => setTimeout(r, 200));
-        }
-
-        // Last resort: try direct input injection in all contexts
-        for (const ctx of cdp.contexts) {
-            const direct = await tryDirectInputInjection(cdp, ctx.id, filePath, targetSelector);
-            if (direct.ok) return direct;
+            await new Promise(r => setTimeout(r, 300));
         }
 
         return { ok: false, reason: 'input_not_invokable' };

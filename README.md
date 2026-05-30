@@ -12,7 +12,7 @@
 **Read this in your language:**
 [日本語](README.ja.md) · [中文（简体）](README.zh-CN.md) · [中文（繁體）](README.zh-TW.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Polski](README.pl.md) · [Türkçe](README.tr.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [العربية](README.ar.md)
 
-> **What's new in v1.0.13** — Stop generation from mobile, MCP server + OpenAPI spec, 15-language UI, file upload improvements. See [CHANGELOG](CHANGELOG.md).
+> **What's new in v1.0.16** — Updated to work with the new Antigravity IDE. Mobile mirror rendering overhaul, reliable stop-button state, copy-to-clipboard, thumbs feedback, and upload resilience. See [CHANGELOG](CHANGELOG.md).
 
 ---
 
@@ -84,19 +84,19 @@ Install from the Antigravity extensions marketplace: search **Antigravity Link**
 
 1) Start Antigravity with remote debugging enabled. This is required; sessions launched without this flag are not discoverable by the extension.
 
-**Windows** (Start Menu shortcut):
+**Windows:**
 ```powershell
-& "C:\Users\<username>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Antigravity\Antigravity.lnk" --remote-debugging-port=9000
+& "C:\Users\<username>\AppData\Local\Programs\Antigravity IDE\Antigravity IDE.exe" --remote-debugging-port=9000
 ```
 
 **macOS:**
 ```bash
-open -a Antigravity --args --remote-debugging-port=9000
+open -a "Antigravity IDE" --args --remote-debugging-port=9000
 ```
 
 **Linux:**
 ```bash
-antigravity --remote-debugging-port=9000
+antigravity-ide --remote-debugging-port=9000
 ```
 
 Multiple Antigravity sessions are supported, but every window must be launched with this command.
@@ -162,8 +162,8 @@ MCP client configuration example:
 ```
 
 Replace `<extension-dir>` with the path to the installed extension:
-- **Windows:** `%USERPROFILE%\.antigravity\extensions\cafetechne.antigravity-link-extension-1.0.13`
-- **macOS/Linux:** `~/.antigravity/extensions/cafetechne.antigravity-link-extension-1.0.13`
+- **Windows:** `%USERPROFILE%\.antigravity-ide\extensions\cafetechne.antigravity-link-extension-1.0.16`
+- **macOS/Linux:** `~/.antigravity-ide/extensions/cafetechne.antigravity-link-extension-1.0.16`
 
 ## How it works (high level)
 
@@ -267,8 +267,8 @@ Add the following to your MCP client configuration (e.g. `claude_desktop_config.
 ```
 
 Replace `<extension-dir>` with the path to the installed extension:
-- **Windows:** `%USERPROFILE%\.antigravity\extensions\cafetechne.antigravity-link-extension-1.0.13`
-- **macOS/Linux:** `~/.antigravity/extensions/cafetechne.antigravity-link-extension-1.0.13`
+- **Windows:** `%USERPROFILE%\.antigravity-ide\extensions\cafetechne.antigravity-link-extension-1.0.16`
+- **macOS/Linux:** `~/.antigravity-ide/extensions/cafetechne.antigravity-link-extension-1.0.16`
 
 The token is the value after `?token=` in the QR code URL. The extension server must be running before the MCP client connects.
 

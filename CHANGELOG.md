@@ -1,5 +1,46 @@
 # Changelog
 
+## 1.0.16
+
+### Mirror Rendering
+- Extended icon-chip dark-background rule to `div`-wrapped tooltip icons (e.g. merge, export) in AI response action rows.
+- Excluded truncated text buttons ("Show N more", section headers) from icon-chip sizing via `:not(.truncate)` guard.
+- `text-muted-foreground` text now renders at full foreground contrast in the mobile mirror.
+- File path attachment chips styled as legible dark pills; white 1×1 GIF placeholder image suppressed.
+- User message text no longer clipped to 10 vh; action bar (timestamp, copy, undo) stacks below text in a column layout instead of floating beside it, eliminating the narrow-last-line gap on long messages.
+- `text-secondary-foreground` spans in collapsible section headers no longer collapse to 1-character-wide columns.
+
+### Stop Button Reliability
+- Removed overly aggressive mirror-tap → `stopGeneration()` routing that fired during any mirror interaction while the AI was generating.
+- Added 10-second post-click cooldown to suppress false `isGenerating` blips that occur when Antigravity briefly reveals its cancel button during copy/show-more actions.
+- Fixed stop state getting stuck when a snapshot is rejected as unusable immediately after generation ends (server now clears `isGenerating` immediately instead of waiting for CDP reinit).
+
+### Copy to Mobile Clipboard
+- Tapping the copy icon in the mirror now writes the message text to the mobile clipboard using the Clipboard API with an `execCommand` fallback for browsers that block clipboard access on self-signed HTTPS.
+- Shows a checkmark on the button for 1.5 s on success.
+
+### Thumbs Up / Thumbs Down
+- Selected rating state is now visible in the mirror via `[aria-pressed="true"]` CSS (blue tint).
+- Optimistic `.ag-thumb-selected` class applied on click so the selection is visible immediately, before the next snapshot arrives.
+
+### Input Box
+- Pasted text no longer overflows the input box horizontally (`overflow-wrap: break-word` + `overflow-x: hidden`).
+
+### File Upload
+- Upload now attempts direct `input[type="file"]` injection first, removing the dependency on UI button text that Google periodically renames.
+- Broadened fallback UI search covers renamed "Add context" labels (`attach`, `add file`, `upload context`) and renamed "Media" labels (`file`, `files`, `images`, `photo`, `document`); also searches `[role="menuitem"]` and `li` elements.
+
+### Upload Feedback
+- Replaced blocking `alert()` dialogs with a non-blocking toast pill that slides up and auto-dismisses (2.5 s on success, 4 s on error).
+- Upload button shows a checkmark icon for 2 s on successful injection.
+
+## 1.0.15
+
+### Documentation
+
+- Updated Quick Start launch commands for the Antigravity IDE rename: Windows command changed from the Start Menu `.lnk` shortcut (which does not forward CLI flags) to the direct `.exe` path `AppData\Local\Programs\Antigravity IDE\Antigravity IDE.exe`, macOS from `open -a Antigravity` to `open -a "Antigravity IDE"`, Linux from `antigravity` to `antigravity-ide`.
+- Updated MCP server extension path from `~/.antigravity/extensions/` to `~/.antigravity-ide/extensions/` to match the new install location.
+
 ## 1.0.14
 
 ### Critical Bug Fixes (Google Chat Layout Change)
