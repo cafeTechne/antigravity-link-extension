@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.17
+
+### Antigravity IDE 2.0 Compatibility
+
+- Broadened chat-container detection to handle renamed containers in Antigravity IDE 2.0. Added `#thread`, `#messages`, `#history`, `#session` to the candidate selector list alongside `#cascade`/`#conversation`.
+- Added content-based container fallback: finds the closest common ancestor of the first message element and the composer, so the correct container is identified even when its ID is unknown.
+- Updated `cascadeChild` composer-removal selector, `isSnapshotUsable` regex, and the CDP probe to recognise all new container names.
+- Broadened `CHAT_SURFACE_SELECTOR` in the mobile client to match new container IDs.
+
+### Blank Page Fix
+
+- Fixed a bug where opening the mobile UI returned a blank page when the active workspace contained a `public/` folder (e.g. a React or Next.js project) without an `index.html`. The extension now only prefers the workspace `public/` directory if it contains `index.html`; otherwise it falls back to the extension's own bundled UI.
+
 ## 1.0.16
 
 ### Mirror Rendering

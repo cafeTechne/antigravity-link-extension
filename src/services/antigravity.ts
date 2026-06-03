@@ -120,9 +120,9 @@ const CAPTURE_SCRIPT = `(() => {
             }) || null;
 
             return {
-                scope: /^(cascade|conversation|chat)$/i.test(String(controlsRoot.id || ''))
+                scope: /^(cascade|conversation|chat|thread|messages|history|session)$/i.test(String(controlsRoot.id || ''))
                     ? String(controlsRoot.id || '').toLowerCase()
-                    : (controlsRoot === document.body ? 'document' : (controlsRoot.tagName || 'unknown').toLowerCase()),
+                    : (controlsRoot === document.body ? 'document' : (controlsRoot.id || controlsRoot.tagName || 'unknown').toLowerCase()),
                 mode: mode ? { text: mode.text, selector: toSelector(mode.el) } : null,
                 model: model ? { text: model.text, selector: toSelector(model.el) } : null,
                 stop: stopEl ? { selector: toSelector(stopEl) } : null,
@@ -136,15 +136,25 @@ const CAPTURE_SCRIPT = `(() => {
             '#cascade',
             '#conversation',
             '#chat',
+            '#thread',
+            '#messages',
+            '#history',
+            '#session',
             '[data-testid="cascade-root"]',
             '[data-testid="conversation-root"]',
             '[data-testid="chat-root"]',
+            '[data-testid="thread-root"]',
+            '[data-testid*="chat" i]',
+            '[data-testid*="conversation" i]',
+            '[data-testid*="thread" i]',
             'main [id^="cascade"]',
             'main [id*="cascade"]',
             'main [id^="conversation"]',
             'main [id*="conversation"]',
             'main [id^="chat"]',
-            'main [id*="chat"]'
+            'main [id*="chat"]',
+            'main [id*="thread"]',
+            'main [id*="message"]'
         ];
 
         const candidates = [];
@@ -156,6 +166,20 @@ const CAPTURE_SCRIPT = `(() => {
                 }
             } catch { }
         }
+
+        // Content-based fallback: find the closest common ancestor of the first
+        // message element and the composer. This works regardless of container ID.
+        try {
+            const firstMsg = document.querySelector('[data-message-id], article[role="article"], [data-testid*="message" i]');
+            const composer = document.querySelector('[data-lexical-editor="true"][contenteditable="true"], [contenteditable="true"][role="textbox"]');
+            if (firstMsg && composer) {
+                let el = firstMsg.parentElement;
+                while (el && el !== document.body && el !== document.documentElement) {
+                    if (el.contains(composer)) { candidates.push(el); break; }
+                    el = el.parentElement;
+                }
+            }
+        } catch { }
 
         const uniqueCandidates = Array.from(new Set(candidates));
         const ranked = uniqueCandidates
@@ -169,12 +193,19 @@ const CAPTURE_SCRIPT = `(() => {
                 if (id === 'cascade') score += 60;
                 if (id === 'conversation') score += 60;
                 if (id === 'chat') score += 56;
+                if (id === 'thread') score += 54;
+                if (id === 'messages') score += 50;
+                if (id === 'history') score += 46;
+                if (id === 'session') score += 44;
                 if (id.includes('cascade')) score += 20;
                 if (id.includes('conversation')) score += 20;
                 if (id.includes('chat')) score += 12;
+                if (id.includes('thread')) score += 12;
+                if (id.includes('message')) score += 10;
                 if (className.includes('cascade')) score += 8;
                 if (className.includes('conversation')) score += 8;
                 if (className.includes('chat')) score += 6;
+                if (className.includes('thread')) score += 6;
                 if (hasComposer) score += 20;
                 if (hasMessageLike) score += 14;
                 if (text.length > 1200) score += 8;
@@ -209,7 +240,7 @@ const CAPTURE_SCRIPT = `(() => {
                 // With a single child, that child contains both messages AND the composer — removing
                 // it would wipe all message content from the snapshot.
                 const cascadeChild = composer.closest(
-                    'div[id^="cascade"] > div, div[id^="conversation"] > div, div[id^="chat"] > div'
+                    'div[id^="cascade"] > div, div[id^="conversation"] > div, div[id^="chat"] > div, div[id^="thread"] > div, div[id^="messages"] > div, div[id^="history"] > div, div[id^="session"] > div'
                 );
                 const cascadeChildSafe = cascadeChild &&
                     cascadeChild.parentElement &&

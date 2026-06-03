@@ -1285,7 +1285,7 @@
         let mirrorStyleSignature = '';
         const boundClickRoots = new WeakSet();
         const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
-        const CHAT_SURFACE_SELECTOR = '#cascade, #conversation, #chat, [data-testid="cascade-root"], [data-testid="conversation-root"], [data-testid="chat-root"], [id^="cascade"], [id*="cascade"], [id^="conversation"], [id*="conversation"], [id^="chat"], [id*="chat"]';
+        const CHAT_SURFACE_SELECTOR = '#cascade, #conversation, #chat, #thread, #messages, #history, #session, [data-testid="cascade-root"], [data-testid="conversation-root"], [data-testid="chat-root"], [data-testid="thread-root"], [data-testid*="chat" i], [data-testid*="conversation" i], [data-testid*="thread" i], [id^="cascade"], [id*="cascade"], [id^="conversation"], [id*="conversation"], [id^="chat"], [id*="chat"], [id*="thread"], [id*="message"]';
         const CHAT_SURFACE = `:is(${CHAT_SURFACE_SELECTOR})`;
 
         // Scroll chatContainer to show the last real content element in the shadow DOM.

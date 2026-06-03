@@ -73,7 +73,13 @@ export class AntigravityServer {
         const rootUploads = path.join(rootBase, 'uploads');
         const rootPublic = path.join(rootBase, 'public');
         this.uploadsDir = fs.existsSync(rootUploads) ? rootUploads : path.join(extensionPath, 'uploads');
-        this.publicDir = fs.existsSync(rootPublic) ? rootPublic : path.join(extensionPath, 'public');
+        // Only prefer the workspace's public/ if it contains index.html; otherwise a
+        // workspace that happens to have a public/ folder (React, Next, etc.) would
+        // shadow the extension's own index.html, returning a blank page.
+        const extPublic = path.join(extensionPath, 'public');
+        this.publicDir = (fs.existsSync(rootPublic) && fs.existsSync(path.join(rootPublic, 'index.html')))
+            ? rootPublic
+            : extPublic;
         this.state = {
             cdpConnections: [],
             lastSnapshot: null,
@@ -180,7 +186,7 @@ export class AntigravityServer {
         const modelText = String(controlsMeta?.model?.text || '').trim();
         const hasControlMeta = !!(modeText || modelText);
 
-        const hasCascade = !!surfaceSignals.hasCascade || /id\s*=\s*["'](?:cascade|conversation|chat)["']/i.test(html);
+        const hasCascade = !!surfaceSignals.hasCascade || /id\s*=\s*["'](?:cascade|conversation|chat|thread|messages|history|session)["']/i.test(html);
         const hasComposer = !!surfaceSignals.hasComposer ||
             /contenteditable\s*=\s*["']true["']/i.test(html) ||
             /data-lexical-editor/i.test(html) ||
@@ -202,7 +208,7 @@ export class AntigravityServer {
     private async probeCandidateForChat(candidate: CDPInfo): Promise<{ ok: boolean; score: number; reason: string; connection?: CDPConnection }> {
         const probeExpression = `(() => {
             const q = (s) => document.querySelector(s);
-            const hasCascade = !!q('#cascade, #conversation, #chat, [id*="cascade"], [id*="conversation"], [id*="chat"]');
+            const hasCascade = !!q('#cascade, #conversation, #chat, #thread, #messages, #history, #session, [id*="cascade"], [id*="conversation"], [id*="chat"], [id*="thread"], [id*="message"]');
             const hasComposer = !!q('[data-lexical-editor="true"][contenteditable="true"], [contenteditable="true"][role="textbox"], textarea');
             const hasMessages = !!q('[data-message-id], [data-testid*="message" i], [class*="message"], article, [role="article"]');
             const hasCommandPalette = !!q('.quick-input-widget, [id*="quickInput" i], [aria-label*="Type a command" i]');
