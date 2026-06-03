@@ -12,7 +12,7 @@
 **Read this in your language:**
 [日本語](README.ja.md) · [中文（简体）](README.zh-CN.md) · [中文（繁體）](README.zh-TW.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Polski](README.pl.md) · [Türkçe](README.tr.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [العربية](README.ar.md)
 
-> **What's new in v1.0.17** — Antigravity IDE 2.0 compatibility: broadened chat-container detection with a content-based fallback so renamed containers are found automatically. Fixed blank page on mobile when workspace contains a `public/` folder. See [CHANGELOG](CHANGELOG.md).
+> **What's new in v1.0.18** — Fixed silent send failure (message now kept in input on error with a toast), stop-button blind spot after mirror clicks, message injection fallback, and minor robustness fixes. See [CHANGELOG](CHANGELOG.md).
 
 ---
 
@@ -162,8 +162,8 @@ MCP client configuration example:
 ```
 
 Replace `<extension-dir>` with the path to the installed extension:
-- **Windows:** `%USERPROFILE%\.antigravity-ide\extensions\cafetechne.antigravity-link-extension-1.0.17`
-- **macOS/Linux:** `~/.antigravity-ide/extensions/cafetechne.antigravity-link-extension-1.0.17`
+- **Windows:** `%USERPROFILE%\.antigravity-ide\extensions\cafetechne.antigravity-link-extension-1.0.18`
+- **macOS/Linux:** `~/.antigravity-ide/extensions/cafetechne.antigravity-link-extension-1.0.18`
 
 ## How it works (high level)
 
@@ -267,8 +267,8 @@ Add the following to your MCP client configuration (e.g. `claude_desktop_config.
 ```
 
 Replace `<extension-dir>` with the path to the installed extension:
-- **Windows:** `%USERPROFILE%\.antigravity-ide\extensions\cafetechne.antigravity-link-extension-1.0.17`
-- **macOS/Linux:** `~/.antigravity-ide/extensions/cafetechne.antigravity-link-extension-1.0.17`
+- **Windows:** `%USERPROFILE%\.antigravity-ide\extensions\cafetechne.antigravity-link-extension-1.0.18`
+- **macOS/Linux:** `~/.antigravity-ide/extensions/cafetechne.antigravity-link-extension-1.0.18`
 
 The token is the value after `?token=` in the QR code URL. The extension server must be running before the MCP client connects.
 

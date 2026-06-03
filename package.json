@@ -3,7 +3,7 @@
     "displayName": "Antigravity Link",
     "description": "Mobile upload and voice-to-text bridge for Antigravity",
     "icon": "icon.png",
-    "version": "1.0.17",
+    "version": "1.0.18",
     "mcpName": "io.github.cafeTechne/antigravity-link",
     "files": [
         "out/**",
