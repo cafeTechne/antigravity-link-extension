@@ -482,10 +482,13 @@ export async function injectMessage(cdp: CDPConnection, text: string): Promise<I
     const EXPRESSION = `(async () => {
         // Find visible editor - Broad discovery
         const editorSelectors = [
+            '#conversation [data-lexical-editor="true"][contenteditable="true"]',
             '#cascade [data-lexical-editor="true"][contenteditable="true"]',
+            '#chat [data-lexical-editor="true"][contenteditable="true"]',
+            '#thread [data-lexical-editor="true"][contenteditable="true"]',
             '[data-lexical-editor="true"][contenteditable="true"]',
             '[contenteditable="true"][role="textbox"]',
-            'div.max-h-\\\\[300px\\\\].rounded.cursor-text' // New Tailwind-based selector
+            'div.max-h-\\\\[300px\\\\].rounded.cursor-text'
         ];
 
         let editor = null;
@@ -560,6 +563,19 @@ export async function injectMessage(cdp: CDPConnection, text: string): Promise<I
             }
         } catch { }
     }
+
+    // Fallback: main world (no contextId) — handles cases where no sub-contexts
+    // were captured during the 1-second wait in connectCDP.
+    try {
+        const result = await cdp.call("Runtime.evaluate", {
+            expression: EXPRESSION,
+            returnByValue: true,
+            awaitPromise: true
+        });
+        const injResult = result.result?.value as InjectResult | undefined;
+        if (injResult?.ok) return injResult;
+        if (injResult) lastResult = injResult;
+    } catch { }
 
     return lastResult;
 }

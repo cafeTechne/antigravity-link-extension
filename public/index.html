@@ -2352,6 +2352,7 @@
             sendBtn.disabled = true;
             sendBtn.textContent = '...';
 
+            let sendOk = false;
             try {
                 const res = await fetch('/send', {
                     method: 'POST',
@@ -2369,12 +2370,26 @@
                     throw new Error('Unauthorized');
                 }
 
+                if (!res.ok) {
+                    let reason = `Send failed (${res.status})`;
+                    try { const d = await res.json(); reason = d.reason || reason; } catch {}
+                    const msg = reason === 'editor_not_found'
+                        ? 'Input not found — is Antigravity chat open?'
+                        : `Send failed: ${reason}`;
+                    showToast(msg, true);
+                } else {
+                    sendOk = true;
+                }
             } catch (e) {
+                if (!(e instanceof Error && e.message === 'Unauthorized')) {
+                    showToast('Send failed — network error', true);
+                }
                 console.error(e);
             } finally {
-                // Always clear textarea after send attempt
-                messageInput.value = '';
-                autoResizeInput(); // Reset to min-height
+                if (sendOk) {
+                    messageInput.value = '';
+                    autoResizeInput();
+                }
                 sendBtn.disabled = false;
                 sendBtn.innerHTML = sendBtnOriginalIcon;
             }
@@ -2879,7 +2894,8 @@
 
                 if (res.ok) {
                     console.log('Click sent successfully');
-                    postClickCooldownUntil = Date.now() + 10000;
+                    preClickWasGenerating = !!(lastSnapshotData && lastSnapshotData.isGenerating);
+                    postClickCooldownUntil = Date.now() + 5000;
                     if (isThumb) {
                         // Clear selection on all sibling thumb buttons, set on clicked one.
                         const row = target.closest('[class*="flex"]');
@@ -2927,10 +2943,12 @@
         let currentStopSelector = '';
         let currentTaskSelector = '';
         // After a mirror click is forwarded, Antigravity transiently shows its cancel button
-        // (copy, "Show N more", etc.) causing a false isGenerating blip. Suppress stop mode
-        // for 10 s after any forwarded click. Real generation outlasts this easily; transient
-        // loading actions don't.
+        // (copy, "Show N more", etc.) causing a false isGenerating blip. Suppress NEW
+        // generation signals for 5 s after any forwarded click, but only if we were NOT
+        // already generating when the click happened — that way an in-flight generation
+        // stays visible on mobile even after tapping something in the mirror.
         let postClickCooldownUntil = 0;
+        let preClickWasGenerating = false;
         let currentWalkthroughSelector = '';
         let currentModelText = '';
         let pendingMenuClick = false;
@@ -3422,9 +3440,11 @@
             const stopData = controlsMeta && controlsMeta.stop ? controlsMeta.stop : null;
             currentStopSelector = stopData ? String(stopData.selector || '') : '';
             const rawGenerating = !!(snapshot && snapshot.isGenerating);
-            // Suppress transient isGenerating blips (copy, "Show N more", etc.) for 10 s
-            // after any forwarded mirror click. Real generation outlasts this window.
-            const isGenerating = rawGenerating && Date.now() >= postClickCooldownUntil;
+            // Suppress transient isGenerating blips after a forwarded click, but only for
+            // new generation starts. If generation was already active when the click happened
+            // (preClickWasGenerating), pass the signal through so the stop button stays visible.
+            const inCooldown = Date.now() < postClickCooldownUntil;
+            const isGenerating = rawGenerating && (!inCooldown || preClickWasGenerating);
             if (stopChip) stopChip.style.display = isGenerating ? '' : 'none';
 
             // Transform the send FAB into a stop button while the AI is generating.

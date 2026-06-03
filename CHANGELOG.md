@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.18
+
+### Bug Fixes
+
+- **Silent send failure**: Mobile send now shows a toast on server error (HTTP 5xx) and keeps the typed message in the input so the user can retry. Previously the input was cleared with no indication the message was lost.
+- **Message injection fallback**: `injectMessage` now tries the main-world CDP context as a fallback when no sub-contexts were captured during startup, preventing silent send failure when context detection times out.
+- **Stop button blind spot**: The post-click cooldown that suppresses false `isGenerating` blips now checks whether generation was already active when the click happened. If it was, the stop button stays visible regardless of the cooldown — only new generation starts are suppressed. Cooldown reduced from 10 s to 5 s.
+- **CDP target self-filter**: `discoverInstances` now exactly excludes `"Antigravity Link QR"` as a standalone target title, preventing the extension from connecting to its own QR panel if it ever appears as a separate page target.
+- **`(server as any).token`**: Removed unnecessary type cast; `AntigravityServer.token` is a public getter and needs no cast.
+- **Stale `#cascade` editor selector**: `injectMessage` now tries `#conversation` first, then `#cascade`, `#chat`, `#thread`, then the generic selector — consistent with the container rename fixes in 1.0.17.
+
 ## 1.0.17
 
 ### Antigravity IDE 2.0 Compatibility

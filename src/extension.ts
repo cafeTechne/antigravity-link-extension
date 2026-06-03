@@ -171,7 +171,7 @@ async function showQR() {
     try {
         const secureUrl = server.secureUrl;
         const localUrl = server.localUrl;
-        const token = (server as any).token || '';
+        const token = server.token || '';
 
         console.log(`[Extension] showQR: secureUrl="${secureUrl}", localUrl="${localUrl}"`);
         outputChannel.appendLine(`[Extension] Generating QR for: ${secureUrl || localUrl}`);

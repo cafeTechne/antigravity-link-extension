@@ -73,7 +73,8 @@ export async function discoverInstances(): Promise<CDPInfo[]> {
             const lowerUrl = url.toLowerCase();
 
             const isSelf = title === 'Antigravity Link' || title === 'Antigravity-Link';
-            const isBridgeUi = lowerTitle === 'antigravity link' || lowerTitle === 'antigravity-link';
+            const isBridgeUi = lowerTitle === 'antigravity link' || lowerTitle === 'antigravity-link'
+                || lowerTitle === 'antigravity link qr';
             const isDevtools = lowerTitle.includes('devtools') || lowerUrl.includes('devtools');
             const isWebview = lowerTitle.includes('vscode-webview') || lowerUrl.includes('vscode-webview');
             const isOwnExtensionWebview = isWebview && lowerUrl.includes('extensionid=cafetechne.antigravity-link-extension');
