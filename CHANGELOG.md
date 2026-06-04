@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.20
+
+### Security
+
+- **Removed `child_process` dependency.** Shell-based Language Server discovery (`Get-CimInstance`/`ps`/`netstat`) has been replaced with reliance on the VS Code `antigravity.getDiagnostics` command (already the primary cascade-ID source) and the CDP DOM-click stop fallback. The `exec`/`child_process` import is gone entirely, eliminating the process-execution attack surface. The `cancelCascadeInvocation` RPC path remains intact and can be re-enabled if an LsConnection is supplied externally in the future.
+
 ## 1.0.19
 
 ### Security
