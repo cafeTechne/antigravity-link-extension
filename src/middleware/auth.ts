@@ -6,7 +6,6 @@ export const authMiddleware = (token: string) => (req: Request, res: Response, n
         req.path === '/index.html' ||
         req.path === '/ping' ||
         req.path === '/sys' ||
-        req.path.startsWith('/debug/') ||
         req.path.match(/\.(js|css|ico|png|json)$/)) {
         return next();
     }

@@ -12,7 +12,7 @@
 **Read this in your language:**
 [日本語](README.ja.md) · [中文（简体）](README.zh-CN.md) · [中文（繁體）](README.zh-TW.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Italiano](README.it.md) · [Polski](README.pl.md) · [Türkçe](README.tr.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [العربية](README.ar.md)
 
-> **What's new in v1.0.18** — Fixed silent send failure (message now kept in input on error with a toast), stop-button blind spot after mirror clicks, message injection fallback, and minor robustness fixes. See [CHANGELOG](CHANGELOG.md).
+> **What's new in v1.0.19** — Security: debug endpoints now require auth, localhost guard on LS RPC calls, hardened PID shell interpolation. See [CHANGELOG](CHANGELOG.md).
 
 ---
 
@@ -162,8 +162,8 @@ MCP client configuration example:
 ```
 
 Replace `<extension-dir>` with the path to the installed extension:
-- **Windows:** `%USERPROFILE%\.antigravity-ide\extensions\cafetechne.antigravity-link-extension-1.0.18`
-- **macOS/Linux:** `~/.antigravity-ide/extensions/cafetechne.antigravity-link-extension-1.0.18`
+- **Windows:** `%USERPROFILE%\.antigravity-ide\extensions\cafetechne.antigravity-link-extension-1.0.19`
+- **macOS/Linux:** `~/.antigravity-ide/extensions/cafetechne.antigravity-link-extension-1.0.19`
 
 ## How it works (high level)
 
@@ -179,7 +179,7 @@ Antigravity Link has no known ban cases and is designed to stay that way.
 The extension works by connecting to a debug port that Antigravity exposes on your own machine the same Chrome DevTools Protocol used by VS Code's built-in debugger and browser devtools. It reads your local UI and simulates keypresses and clicks, exactly as if you were sitting at your keyboard.
 
 What this means in practice:
-- **No requests are made to Google's servers** beyond what Antigravity already sends. The extension has no network access outside your LAN.
+- **All network activity is local.** The extension communicates only with: your phone on the LAN via the HTTPS server it starts; Antigravity IDE's Chrome DevTools Protocol port on `localhost:9000`; and Antigravity's Language Server process on `127.0.0.1` for the stop-generation RPC. No data is sent to Google's servers or any external service beyond what Antigravity itself sends.
 - **Nothing is injected into Antigravity's network traffic.** The extension reads your screen and types into your editor it does not intercept or modify API calls.
 - **No Antigravity files are modified.** There are no patches, hooks, or binary modifications.
 - **The server runs entirely on your machine.** Your prompts, chat history, and files never leave your local network unless you explicitly expose the server externally.
@@ -267,8 +267,8 @@ Add the following to your MCP client configuration (e.g. `claude_desktop_config.
 ```
 
 Replace `<extension-dir>` with the path to the installed extension:
-- **Windows:** `%USERPROFILE%\.antigravity-ide\extensions\cafetechne.antigravity-link-extension-1.0.18`
-- **macOS/Linux:** `~/.antigravity-ide/extensions/cafetechne.antigravity-link-extension-1.0.18`
+- **Windows:** `%USERPROFILE%\.antigravity-ide\extensions\cafetechne.antigravity-link-extension-1.0.19`
+- **macOS/Linux:** `~/.antigravity-ide/extensions/cafetechne.antigravity-link-extension-1.0.19`
 
 The token is the value after `?token=` in the QR code URL. The extension server must be running before the MCP client connects.
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.19
+
+### Security
+
+- **Debug endpoints now require authentication.** `/debug/*` routes were previously accessible on the LAN without a token, exposing snapshot HTML, cascade IDs, Language Server connection details, and button inventories. They now require the same Bearer token as the REST API.
+- **Localhost guard on all Language Server RPC calls.** `lsPost`, `cancelCascadeInvocation`, and `probePort` now assert the destination URL starts with `https?://127.0.0.1:` before connecting. Requests to any other host are rejected.
+- **Hardened PID shell interpolation.** `findConnectPort` validates `pid` as a positive integer below 10,000,000 and converts it to an explicit base-10 string before interpolation into the `netstat`/`ss` shell command, eliminating any theoretical injection surface.
+- **README network claim updated.** The "no network access outside your LAN" statement now explicitly lists the three local destinations (LAN HTTPS server, CDP on `localhost:9000`, LS RPC on `127.0.0.1`) so the claim is precise and verifiable by static analysis.
+- **`rejectUnauthorized: false` documented.** All three LS RPC call sites now have an inline comment explaining that cert validation is intentionally skipped because the destination is always `127.0.0.1`.
+
 ## 1.0.18
 
 ### Bug Fixes
