@@ -114,6 +114,9 @@ export async function getActiveCascadeIdFromLs(): Promise<string> {
 
 /** Generic POST helper used by LS RPC calls (returns raw response body). */
 function lsPost(url: string, conn: LsConnection, payload: string): Promise<string | null> {
+    // All LS RPC targets are on 127.0.0.1; refuse anything that isn't localhost.
+    if (!/^https?:\/\/127\.0\.0\.1:/.test(url)) return Promise.resolve(null);
+
     return new Promise((resolve) => {
         const mod = conn.useTls ? https : http;
         const req = (mod as typeof https).request(
@@ -125,6 +128,9 @@ function lsPost(url: string, conn: LsConnection, payload: string): Promise<strin
                     'Content-Length': Buffer.byteLength(payload),
                     'x-codeium-csrf-token': conn.csrfToken,
                 },
+                // The LS uses a self-signed cert; cert validation is intentionally
+                // skipped. The destination is always 127.0.0.1 so there is no
+                // man-in-the-middle risk.
                 rejectUnauthorized: false,
                 timeout: 5000,
             },
@@ -156,6 +162,9 @@ export async function cancelCascadeInvocation(
 ): Promise<{ ok: boolean; status?: number; body?: string }> {
     const proto = conn.useTls ? 'https' : 'http';
     const url = `${proto}://127.0.0.1:${conn.port}/exa.language_server_pb.LanguageServerService/CancelCascadeInvocation`;
+    if (!/^https?:\/\/127\.0\.0\.1:/.test(url)) {
+        return { ok: false, status: 0, body: 'invalid host' };
+    }
     const payload = JSON.stringify({ cascadeId });
 
     return new Promise((resolve, reject) => {
@@ -169,6 +178,7 @@ export async function cancelCascadeInvocation(
                     'Content-Length': Buffer.byteLength(payload),
                     'x-codeium-csrf-token': conn.csrfToken,
                 },
+                // Self-signed LS cert on 127.0.0.1 — no MITM risk, skip validation.
                 rejectUnauthorized: false,
                 timeout: 5000,
             },
@@ -258,7 +268,7 @@ async function findLsProcess(): Promise<LsProcess | null> {
     const extPortStr = extractArg(line, 'extension_server_port');
     const extPort = extPortStr ? parseInt(extPortStr, 10) : 0;
 
-    if (!csrfToken || isNaN(pid)) return null;
+    if (!csrfToken || !Number.isInteger(pid) || pid <= 0 || pid >= 10_000_000) return null;
     return { pid, csrfToken, extPort };
 }
 
@@ -267,17 +277,22 @@ async function findConnectPort(
     extPort: number,
     csrfToken: string,
 ): Promise<{ port: number; useTls: boolean } | null> {
+    // pid is validated as a positive integer before reaching here; convert to
+    // base-10 string explicitly so interpolation can never carry unexpected chars.
+    if (!Number.isInteger(pid) || pid <= 0 || pid >= 10_000_000) return null;
+    const safePid = pid.toString(10);
+
     let output: string;
     try {
         if (process.platform === 'win32') {
             const result = await execAsync(
-                `netstat -aon | findstr "LISTENING" | findstr "${pid}"`,
+                `netstat -aon | findstr "LISTENING" | findstr "${safePid}"`,
                 { encoding: 'utf8', timeout: 5_000, windowsHide: true } as any,
             );
             output = String(result.stdout);
         } else {
             const result = await execAsync(
-                `ss -tlnp 2>/dev/null | grep "pid=${pid}" || netstat -tlnp 2>/dev/null | grep "${pid}"`,
+                `ss -tlnp 2>/dev/null | grep "pid=${safePid}" || netstat -tlnp 2>/dev/null | grep "${safePid}"`,
                 { encoding: 'utf8', timeout: 5_000 },
             );
             output = result.stdout;
@@ -317,6 +332,7 @@ function probePort(port: number, useTls: boolean, csrfToken: string): Promise<bo
                     'Content-Length': 2,
                     'x-codeium-csrf-token': csrfToken,
                 },
+                // Self-signed LS cert on 127.0.0.1 — no MITM risk, skip validation.
                 rejectUnauthorized: false,
                 timeout: 2000,
             },
