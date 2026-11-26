@@ -1,7 +1,6 @@
 
 # Antigravity Link (VS Code Extension)
 
-[![CI](https://github.com/cafeTechne/antigravity-link-extension/actions/workflows/ci.yml/badge.svg)](https://github.com/cafeTechne/antigravity-link-extension/actions/workflows/ci.yml)
 [![Open VSX Version](https://img.shields.io/open-vsx/v/cafetechne/antigravity-link-extension)](https://open-vsx.org/extension/cafetechne/antigravity-link-extension)
 [![Open VSX Downloads](https://img.shields.io/open-vsx/dt/cafetechne/antigravity-link-extension)](https://open-vsx.org/extension/cafetechne/antigravity-link-extension)
 [![npm version](https://img.shields.io/npm/v/antigravity-link-extension)](https://www.npmjs.com/package/antigravity-link-extension)
@@ -98,6 +97,11 @@ open -a "Antigravity IDE" --args --remote-debugging-port=9000
 ```bash
 antigravity-ide --remote-debugging-port=9000
 ```
+
+> **Linux CLI setup (`antigravity-ide: command not found`):**
+> - If you installed from the official Linux tarball, `antigravity-ide` isn't added to your `PATH` automatically. You can either run the binary directly from the extracted folder (`./antigravity-ide --remote-debugging-port=9000`) or use the community [`install-antigravity-ide.sh`](https://gist.github.com/mattezell/febc265a34f9f60058fa48d0f000364d/31b1d6985db619d8877080506b48b92d33e1d4f8) helper script (moves the extracted tarball to `~/Applications/antigravity-ide`, creates the `~/.local/bin/antigravity-ide` CLI symlink, adds a `.desktop` launcher, and configures the Ubuntu 24.04+ AppArmor user-namespace profile).
+> - Make sure `~/.local/bin` is on your `PATH` (e.g. `export PATH="$HOME/.local/bin:$PATH"` in `~/.bashrc` or `~/.zshrc`).
+> - If you installed via Snap (`antigravity-ide-snap`), you can launch with `snap run antigravity-ide-snap --remote-debugging-port=9000` (or `antigravity-ide --remote-debugging-port=9000` if aliased).
 
 Multiple Antigravity sessions are supported, but every window must be launched with this command.
 
