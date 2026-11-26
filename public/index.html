@@ -1283,9 +1283,10 @@
         let mirrorHost = null;
         let mirrorRoot = null;
         let mirrorStyleSignature = '';
+        let lastRenderedHtml = '';
         const boundClickRoots = new WeakSet();
         const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
-        const CHAT_SURFACE_SELECTOR = '#cascade, #conversation, #chat, #thread, #messages, #history, #session, [data-testid="cascade-root"], [data-testid="conversation-root"], [data-testid="chat-root"], [data-testid="thread-root"], [data-testid*="chat" i], [data-testid*="conversation" i], [data-testid*="thread" i], [id^="cascade"], [id*="cascade"], [id^="conversation"], [id*="conversation"], [id^="chat"], [id*="chat"], [id*="thread"], [id*="message"]';
+        const CHAT_SURFACE_SELECTOR = '[data-testid="conversation-view"], #cascade, #conversation, #chat, #thread, #messages, #history, #session, [data-testid="aux-pane-split"], [data-testid="cascade-root"], [data-testid="conversation-root"], [data-testid="chat-root"], [data-testid="thread-root"], [data-testid*="chat" i], [data-testid*="thread" i], [id^="cascade"], [id*="cascade"], [id^="conversation"], [id*="conversation"], [id^="chat"], [id*="chat"], [id*="thread"], [id*="message"]';
         const CHAT_SURFACE = `:is(${CHAT_SURFACE_SELECTOR})`;
 
         // Scroll chatContainer to show the last real content element in the shadow DOM.
@@ -1501,6 +1502,7 @@
                     color: ${fg};
                     background: transparent;
                     color-scheme: ${scheme};
+                    ${String(data.rootStyle || '').split(';').map(s => s.trim()).filter(s => s.startsWith('--') && !/[{}]/.test(s)).join('; ')};
                     --vscode-foreground: ${fg};
                     --vscode-editor-background: ${bg};
                     --vscode-sideBar-background: ${bg};
@@ -1932,11 +1934,14 @@
 
         function hasVisibleChatSurface(root) {
             if (!root) return false;
-            const surface = root.querySelector(CHAT_SURFACE_SELECTOR);
-            if (!surface) return false;
-            const textLen = normalizeInlineText(surface.textContent || '').length;
-            const hasContentNodes = !!surface.querySelector('[data-message-id], [data-testid*="message" i], article, p, pre, code, button');
-            return textLen > 0 || hasContentNodes;
+            const surfaces = root.querySelectorAll(CHAT_SURFACE_SELECTOR);
+            for (const surface of surfaces) {
+                if (surface.tagName === 'BUTTON' || surface.getAttribute('role') === 'button') continue;
+                const textLen = normalizeInlineText(surface.textContent || '').length;
+                const hasContentNodes = !!surface.querySelector('[data-message-id], [data-testid*="message" i], [data-testid="turn-cards-container"], article, p, pre, code, button');
+                if (textLen > 0 || hasContentNodes) return true;
+            }
+            return false;
         }
 
         function ensureMirrorRoot() {
@@ -2081,11 +2086,17 @@
                 String(safeCss).length
             ].join('|');
 
-            if (cssSig !== mirrorStyleSignature) {
+            const cssChanged = cssSig !== mirrorStyleSignature;
+            if (cssChanged) {
                 styleEl.textContent = buildMirrorStyles({ ...data, css: safeCss }, bodyColor);
                 mirrorStyleSignature = cssSig;
                 syncMirrorThemeVars();
             }
+
+            if (safeHtml === lastRenderedHtml && !cssChanged) {
+                return;
+            }
+            lastRenderedHtml = safeHtml;
 
             const themeClass = String(data.themeClass || '').trim();
             contentEl.className = themeClass;
@@ -2343,12 +2354,15 @@
         }
 
         // Send message
+        let isSendingMessage = false;
         async function sendMessage() {
+            if (isSendingMessage) return;
             if (!checkAuth()) return;
 
             const message = messageInput.value.trim();
             if (!message) return;
 
+            isSendingMessage = true;
             sendBtn.disabled = true;
             sendBtn.textContent = '...';
 
@@ -2390,6 +2404,7 @@
                     messageInput.value = '';
                     autoResizeInput();
                 }
+                isSendingMessage = false;
                 sendBtn.disabled = false;
                 sendBtn.innerHTML = sendBtnOriginalIcon;
             }
@@ -2755,25 +2770,40 @@
         }
 
         messageInput.addEventListener('input', autoResizeInput);
-        // Helper to generate unique CSS selector
+        // Helper to generate unique CSS selector that matches the host IDE DOM
+        // (never includes the mobile shadow-DOM wrapper #mirrorContent).
         function getUniqueSelector(el) {
-            if (!el) return '';
-            if (el.id) return '#' + CSS.escape(el.id);
-            // path fallback
+            if (!el || el.id === 'mirrorContent') return '';
+            const directTestId = el.getAttribute && el.getAttribute('data-testid');
+            if (directTestId) return `${el.nodeName.toLowerCase()}[data-testid="${CSS.escape(directTestId)}"]`;
+            if (el.id && el.id !== 'mirrorContent' && !/^(base-ui-|:r)/.test(el.id)) {
+                return '#' + CSS.escape(el.id);
+            }
+            const directAria = el.getAttribute && el.getAttribute('aria-label');
+            if (directAria && directAria.length <= 80) {
+                return `${el.nodeName.toLowerCase()}[aria-label="${CSS.escape(directAria)}"]`;
+            }
+            // Path fallback anchored at the first stable host ancestor (stopping before #mirrorContent)
             const path = [];
             while (el && el.nodeType === Node.ELEMENT_NODE) {
+                if (el.id === 'mirrorContent' || el.id === 'snapshotHost') break;
                 let selector = el.nodeName.toLowerCase();
-                if (el.id) {
+                const testId = el.getAttribute && el.getAttribute('data-testid');
+                if (testId) {
+                    selector = `${selector}[data-testid="${CSS.escape(testId)}"]`;
+                    path.unshift(selector);
+                    break;
+                }
+                if (el.id && !/^(base-ui-|:r)/.test(el.id)) {
                     selector = '#' + CSS.escape(el.id);
                     path.unshift(selector);
                     break;
-                } else {
-                    let sib = el, nth = 1;
-                    while (sib = sib.previousElementSibling) {
-                        if (sib.nodeName.toLowerCase() === selector) nth++;
-                    }
-                    if (nth != 1) selector += ":nth-of-type(" + nth + ")";
                 }
+                let sib = el, nth = 1;
+                while (sib = sib.previousElementSibling) {
+                    if (sib.nodeName.toLowerCase() === selector) nth++;
+                }
+                if (nth != 1) selector += ":nth-of-type(" + nth + ")";
                 path.unshift(selector);
                 el = el.parentNode;
                 if (el instanceof ShadowRoot) {
@@ -2884,11 +2914,9 @@
                         'Authorization': `Bearer ${authToken}`
                     },
                     body: JSON.stringify({
-                        text: text.substring(0, 50),
+                        text: text.trim().substring(0, 80),
                         tag: tag,
-                        selector: selector,
-                        x: Math.round(e.clientX),
-                        y: Math.round(e.clientY)
+                        selector: selector || undefined
                     })
                 });
 
@@ -3032,13 +3060,7 @@
                 pendingMenuClick = true;
                 pendingMenuAttempts = 0;
                 lastClickedType = type || '';
-                // The mode/model dialogs are always present in the DOM (even when visually
-                // closed), so we can detect their items immediately from the current snapshot
-                // without waiting up to 3 s for the next server poll.
-                if (lastSnapshotData) {
-                    lastControlsSignature = ''; // force re-evaluation
-                    updateControls(lastSnapshotData);
-                }
+                lastControlsSignature = ''; // force re-evaluation when post-click snapshot arrives
             }
 
             try {
@@ -3047,6 +3069,13 @@
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                     body: JSON.stringify({ selector: safeSelector || undefined, text: safeText || undefined })
                 });
+                if (expectMenu) {
+                    setTimeout(() => {
+                        if (pendingMenuClick && ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'request_snapshot' }));
+                        }
+                    }, 350);
+                }
             } catch (err) { console.error('Error forwarding click:', err); }
         }
 
@@ -3095,11 +3124,19 @@
             }, 10);
         }
 
-        function hideSheet() {
+        function hideSheet(dismissOnHost = false) {
+            const wasOpen = optionsSheet.classList.contains('show');
             sheetOverlay.classList.remove('show');
             optionsSheet.classList.remove('show');
             if (!contentSheet.classList.contains('show')) {
                 setTimeout(() => { sheetOverlay.style.display = 'none'; }, 300);
+            }
+            if (dismissOnHost && (wasOpen || pendingMenuClick) && authToken) {
+                fetch('/click', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    body: JSON.stringify({ selector: '__dismiss_menu__' })
+                }).catch(() => {});
             }
             pendingMenuClick = false;
             pendingMenuAttempts = 0;
@@ -3296,9 +3333,9 @@
             return '';
         }
 
-        if (sheetClose) sheetClose.addEventListener('click', hideSheet);
+        if (sheetClose) sheetClose.addEventListener('click', () => hideSheet(true));
         if (contentSheetClose) contentSheetClose.addEventListener('click', hideContentSheet);
-        if (sheetOverlay) sheetOverlay.addEventListener('click', () => { hideSheet(); hideContentSheet(); });
+        if (sheetOverlay) sheetOverlay.addEventListener('click', () => { hideSheet(true); hideContentSheet(); });
 
         if (modelChip) modelChip.addEventListener('click', () => { if (currentModelSelector) sendClickToServer(currentModelSelector, currentModelText, 'model', true); });
 
@@ -3370,6 +3407,7 @@
                 hasComposer: !!(surfaceSignals && surfaceSignals.hasComposer),
                 hasMessages: !!(surfaceSignals && surfaceSignals.hasMessages),
                 controlsLen: controlsHtml.length,
+                isGenerating: !!(snapshot && snapshot.isGenerating),
                 hasStop: !!(controlsMeta && controlsMeta.stop),
                 hasTask: !!(controlsMeta && controlsMeta.task),
                 hasWalkthrough: !!(controlsMeta && controlsMeta.walkthrough)
@@ -3492,6 +3530,11 @@
             pendingMenuAttempts += 1;
 
             const panelSelectors = [
+                '[data-base-ui-portal] [role="menu"]',
+                '[data-base-ui-portal] [role="listbox"]',
+                '[role="menu"][data-open]',
+                '[role="listbox"][data-open]',
+                '[data-base-ui-portal]',
                 '[id^="headlessui-popover-panel"]',
                 '[id^="headlessui-menu-items"]',
                 '[id^="headlessui-listbox-options"]',
@@ -3512,10 +3555,12 @@
                 let text = normalizeControlText(item.innerText || item.textContent || '');
                 const medium = item.querySelector('.font-medium');
                 if (medium) text = normalizeControlText(medium.textContent || text);
+                // Strip trailing badge labels (e.g. "New", "Leaving Soon", "Notice") appended to model items
+                text = text.replace(/\s+(?:New|Leaving Soon|Notice|Beta)$/i, '').trim();
                 return text;
             };
             const collectItems = (rootEl) => {
-                const itemSels = ['button', '[role="menuitem"]', '[role="option"]', 'li', '.cursor-pointer', 'a', 'div.cursor-pointer', '[class*="menu-item"]', '[class*="option"]'];
+                const itemSels = ['[role="menuitem"]', '[role="menuitemradio"]', '[role="option"]', 'button', 'li', '.cursor-pointer', 'a', 'div.cursor-pointer', '[class*="menu-item"]', '[class*="option"]', '.quick-input-list-entry', '.monaco-list-row'];
                 const seen = new Set();
                 return Array.from(rootEl.querySelectorAll(itemSels.join(', ')))
                     .map((item) => ({ text: normalizeItemText(item), selector: '' }))
@@ -3529,6 +3574,10 @@
             };
 
             for (const panel of Array.from(temp.querySelectorAll(panelSelectors.join(', ')))) {
+                // Skip hidden/offscreen drawers such as the collapsed sidebar dialog
+                if (panel.getAttribute('aria-hidden') === 'true') continue;
+                const panelStyle = String(panel.getAttribute('style') || '').toLowerCase();
+                if (panelStyle.includes('pointer-events: none') || panelStyle.includes('translatex(-100%)')) continue;
                 const panelText = normalizeControlText(panel.textContent || '');
                 const panelHints = normalizeControlText([
                     panel.id || '',
@@ -3536,7 +3585,7 @@
                     String(panel.className || '')
                 ].join(' ')).toLowerCase();
                 if (panelText.length < 2) continue;
-                if (panelHints.includes('quick-input') || panelHints.includes('quickpick') || panelHints.includes('command palette')) continue;
+                if ((panelHints.includes('quick-input') || panelHints.includes('quickpick') || panelHints.includes('command palette')) && lastClickedType !== 'model' && lastClickedType !== 'mode') continue;
                 if (isCommandPaletteOption(panelText)) continue;
 
                 const foundItems = collectItems(panel);
@@ -3559,16 +3608,9 @@
                 if (beats) { bestItems = typedItems; bestIsTyped = panelIsTyped; }
             }
 
-            if (bestItems.length === 0) {
+            if (bestItems.length === 0 && lastClickedType !== 'model') {
                 const globalItems = collectItems(temp);
-                let typedItems = globalItems;
-                if (lastClickedType === 'model') {
-                    typedItems = globalItems.filter((it) => isModelLikeLabel(it.text) || /\b(gemini|claude|gpt|sonnet|haiku|flash|pro|opus|llama|deepseek)\b/i.test(it.text));
-                }
-                if (lastClickedType === 'model' && typedItems.length === 0 && globalItems.length >= 2) {
-                    typedItems = globalItems.slice(0, 12);
-                }
-                bestItems = typedItems;
+                bestItems = globalItems;
             }
 
             if (bestItems.length > 0) {
@@ -3598,7 +3640,7 @@
             const openSheet = document.querySelector('#optionsSheet.show, #contentSheet.show');
             if (!openSheet) return;
             if (e.key === 'Escape') {
-                hideSheet();
+                hideSheet(true);
                 hideContentSheet();
                 return;
             }

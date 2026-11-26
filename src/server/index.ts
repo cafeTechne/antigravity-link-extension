@@ -58,6 +58,9 @@ export class AntigravityServer {
     private primarySendFn: ((msg: string) => Promise<boolean>) | null = null;
     private getActiveCascadeIdFn: (() => Promise<string>) | null = null;
     private isGeneratingTracker = new IsGeneratingTracker(10_000);
+    private sendInFlight = false;
+    private lastSentMessage = '';
+    private lastSentAt = 0;
 
     constructor(port: number, extensionPath: string, workspaceRoot?: string, useHttps = true, preferredHost = '', primarySendFn?: (message: string) => Promise<boolean>, getActiveCascadeIdFn?: () => Promise<string>) {
         this.port = port;
@@ -145,6 +148,8 @@ export class AntigravityServer {
         const title = (target.title || '').toLowerCase();
         const url = (target.url || '').toLowerCase();
         let score = 0;
+        if (url.includes('extensionview=true') || url.includes('hostvariant=antigravity')) score += 30;
+        if (title.includes('antigravity chat') || (title.includes(' - antigravity') && !title.includes('antigravity ide'))) score += 12;
         if (url.includes('workbench') || url.includes('jetski')) score += 6;
         if (title.includes('antigravity-link')) score += 6;
         if (title.includes('launchpad')) score += 2; // lower priority than chat
@@ -160,7 +165,9 @@ export class AntigravityServer {
     private isWorkbenchTarget(target: { title?: string; url?: string }): boolean {
         const title = (target.title || '').toLowerCase();
         const url = (target.url || '').toLowerCase();
-        return url.includes('workbench') ||
+        return url.includes('extensionview=true') ||
+            url.includes('hostvariant=antigravity') ||
+            url.includes('workbench') ||
             url.includes('jetski') ||
             title.includes('antigravity') ||
             title.includes('launchpad');
@@ -186,11 +193,13 @@ export class AntigravityServer {
         const modelText = String(controlsMeta?.model?.text || '').trim();
         const hasControlMeta = !!(modeText || modelText);
 
-        const hasCascade = !!surfaceSignals.hasCascade || /id\s*=\s*["'](?:cascade|conversation|chat|thread|messages|history|session)["']/i.test(html);
+        const hasCascade = !!surfaceSignals.hasCascade ||
+            /id\s*=\s*["'](?:cascade|conversation|chat|thread|messages|history|session)["']/i.test(html) ||
+            /data-testid\s*=\s*["'](?:conversation-view|aux-pane-split|agent-input-box|home-greeting)["']/i.test(html);
         const hasComposer = !!surfaceSignals.hasComposer ||
             /contenteditable\s*=\s*["']true["']/i.test(html) ||
             /data-lexical-editor/i.test(html) ||
-            /role\s*=\s*["']textbox["']/i.test(html);
+            /role\s*=\s*["'](?:textbox|combobox)["']/i.test(html);
         const hasMessages = !!surfaceSignals.hasMessages ||
             /data-message-id|role\s*=\s*["']article["']|class\s*=\s*["'][^"']*message/i.test(html);
 
@@ -208,8 +217,8 @@ export class AntigravityServer {
     private async probeCandidateForChat(candidate: CDPInfo): Promise<{ ok: boolean; score: number; reason: string; connection?: CDPConnection }> {
         const probeExpression = `(() => {
             const q = (s) => document.querySelector(s);
-            const hasCascade = !!q('#cascade, #conversation, #chat, #thread, #messages, #history, #session, [id*="cascade"], [id*="conversation"], [id*="chat"], [id*="thread"], [id*="message"]');
-            const hasComposer = !!q('[data-lexical-editor="true"][contenteditable="true"], [contenteditable="true"][role="textbox"], textarea');
+            const hasCascade = !!q('#cascade, #conversation, #chat, #thread, #messages, #history, #session, [data-testid="conversation-view"], [data-testid="aux-pane-split"], [data-testid="agent-input-box"], [data-testid="home-greeting"], [id*="cascade"], [id*="conversation"], [id*="chat"], [id*="thread"], [id*="message"]');
+            const hasComposer = !!q('[data-lexical-editor="true"][contenteditable="true"], [contenteditable="true"][role="textbox"], [contenteditable="true"][role="combobox"], textarea');
             const hasMessages = !!q('[data-message-id], [data-testid*="message" i], [class*="message"], article, [role="article"]');
             const hasCommandPalette = !!q('.quick-input-widget, [id*="quickInput" i], [aria-label*="Type a command" i]');
             return { hasCascade, hasComposer, hasMessages, hasCommandPalette, title: String(document.title || ''), href: String(location.href || '') };
@@ -354,7 +363,7 @@ export class AntigravityServer {
         await this.updateSnapshot();
     }
 
-    private async updateSnapshot(): Promise<boolean> {
+    private async updateSnapshot(forceBroadcast = false): Promise<boolean> {
         if (this.state.cdpConnections.length === 0) {
             const now = Date.now();
             if (!this.state.reinitInProgress && (now - this.state.lastCdpInitAttemptAt > 2000)) {
@@ -398,15 +407,13 @@ export class AntigravityServer {
                 }
                 const hash = this.hashString(snapshot.html);
                 const wasGenerating = this.state.lastBroadcastIsGenerating;
-                // Combine DOM-based signal (stop button in DOM, composer disabled, etc.)
-                // with hash-based signal (streaming content changes).  DOM is immediate;
-                // hash catches cases where the stop button isn't visible but text is changing.
-                const domIsGenerating = !!(snapshot as any).isGenerating;
-                // If DOM says generation just ended, reset the hash tracker NOW so the
-                // stop chip clears this poll instead of waiting up to 10 s for the window.
-                if (!domIsGenerating && wasGenerating) this.isGeneratingTracker.reset();
-                const hashIsGenerating = this.isGeneratingTracker.update(hash);
-                const isGenerating = domIsGenerating || hashIsGenerating;
+                // Ground-truth DOM signal: Antigravity's cancel button
+                // ([data-tooltip-id="input-send-button-cancel-tooltip"]) is only visible
+                // while generation is actively running. Do not OR in hash-change heuristics,
+                // because relative timestamps ("3m ago" -> "4m ago") and UI toggles mutate
+                // snapshot.html while idle and cause phantom stop-button cycling.
+                const isGenerating = !!(snapshot as any).isGenerating;
+                if (!isGenerating && wasGenerating) this.isGeneratingTracker.reset();
                 (snapshot as any).isGenerating = isGenerating;
 
                 // When generation first starts, capture button inventory for stop-button debugging.
@@ -414,8 +421,8 @@ export class AntigravityServer {
                     this.captureStopProbe(cdp).catch(() => { /* best-effort */ });
                 }
 
-                if (hash !== this.state.lastSnapshotHash) {
-                    // HTML changed — normal broadcast path
+                if (forceBroadcast || hash !== this.state.lastSnapshotHash) {
+                    // HTML changed or broadcast was explicitly requested (e.g. after /click opened a portal menu in controlsHtml)
                     this.state.lastSnapshot = snapshot;
                     this.state.lastSnapshotHash = hash;
                     this.state.missedSnapshots = 0;
@@ -425,13 +432,12 @@ export class AntigravityServer {
                     return true;
                 }
 
-                // HTML unchanged but isGenerating flipped — push update so client stops showing stop UI
+                // HTML unchanged but isGenerating flipped — push fresh snapshot so client clears stop UI
                 if (isGenerating !== this.state.lastBroadcastIsGenerating) {
                     this.state.lastBroadcastIsGenerating = isGenerating;
-                    if (this.state.lastSnapshot) {
-                        (this.state.lastSnapshot as any).isGenerating = isGenerating;
-                        this.broadcastSnapshot(this.state.lastSnapshot);
-                    }
+                    this.state.lastSnapshot = snapshot;
+                    if (this.state.activePort) this.state.snapshotCache.set(this.state.activePort, snapshot);
+                    this.broadcastSnapshot(snapshot);
                 }
                 this.state.missedSnapshots = 0;
                 return false;
@@ -628,26 +634,36 @@ export class AntigravityServer {
 
         router.get('/task', (_req, res) => {
             const brainDir = path.join(os.homedir(), '.gemini', 'antigravity', 'brain');
-            const filePath = this.findBrainFile('task.md.resolved');
-            if (!filePath) return res.status(404).json({ error: 'Task file not found', searched: brainDir });
-            try {
-                const content = fs.readFileSync(filePath, 'utf8');
-                res.json({ content, path: filePath });
-            } catch (e) {
-                res.status(500).json({ error: (e as Error).message });
+            const candidates = ['task.md.resolved', 'task.md'];
+            for (const name of candidates) {
+                const filePath = this.findBrainFile(name);
+                if (filePath) {
+                    try {
+                        const content = fs.readFileSync(filePath, 'utf8');
+                        return res.json({ content, path: filePath });
+                    } catch (e) {
+                        return res.status(500).json({ error: (e as Error).message });
+                    }
+                }
             }
+            res.status(404).json({ error: 'Task file not found', searched: brainDir });
         });
 
         router.get('/walkthrough', (_req, res) => {
             const brainDir = path.join(os.homedir(), '.gemini', 'antigravity', 'brain');
-            const filePath = this.findBrainFile('walkthrough.md.resolved');
-            if (!filePath) return res.status(404).json({ error: 'Walkthrough file not found', searched: brainDir });
-            try {
-                const content = fs.readFileSync(filePath, 'utf8');
-                res.json({ content, path: filePath });
-            } catch (e) {
-                res.status(500).json({ error: (e as Error).message });
+            const candidates = ['walkthrough.md.resolved', 'walkthrough.md'];
+            for (const name of candidates) {
+                const filePath = this.findBrainFile(name);
+                if (filePath) {
+                    try {
+                        const content = fs.readFileSync(filePath, 'utf8');
+                        return res.json({ content, path: filePath });
+                    } catch (e) {
+                        return res.status(500).json({ error: (e as Error).message });
+                    }
+                }
             }
+            res.status(404).json({ error: 'Walkthrough file not found', searched: brainDir });
         });
 
         router.get('/plan', (_req, res) => {
@@ -702,26 +718,39 @@ export class AntigravityServer {
             const { message } = req.body as { message?: string };
             if (!message) return res.status(400).json({ error: 'Message required' });
 
-            // Try VS Code command injection first (more reliable than CDP DOM injection)
-            if (this.primarySendFn) {
-                try {
-                    const ok = await this.primarySendFn(message);
-                    if (ok) return res.json({ success: true, method: 'vscode_command', target: 'antigravity' });
-                } catch { /* fall through to CDP */ }
+            const now = Date.now();
+            const normalized = message.trim();
+            if (this.sendInFlight || (normalized === this.lastSentMessage && now - this.lastSentAt < 2500)) {
+                return res.json({ success: true, method: 'deduped', target: 'antigravity' });
             }
+            this.sendInFlight = true;
+            this.lastSentMessage = normalized;
+            this.lastSentAt = now;
 
-            // Fall back to CDP DOM injection
-            const cdp = this.state.activeTargetId
-                ? this.state.cdpConnections.find(c => c.id === this.state.activeTargetId)
-                : this.state.cdpConnections[0];
-            if (!cdp) return res.status(503).json({ error: 'CDP not connected' });
-            const activeCdp = cdp;
             try {
-                const result = await injectMessage(activeCdp, message);
-                if (result.ok) return res.json({ success: true, method: result.method, target: activeCdp.title });
-                res.status(500).json({ success: false, reason: result.reason });
-            } catch (e) {
-                res.status(500).json({ error: (e as Error).message });
+                // Prefer CDP Lexical/DOM injection when connected (reliably inserts and submits in Antigravity 2.0)
+                const cdp = this.state.activeTargetId
+                    ? this.state.cdpConnections.find(c => c.id === this.state.activeTargetId)
+                    : this.state.cdpConnections[0];
+                if (cdp) {
+                    try {
+                        const result = await injectMessage(cdp, message);
+                        if (result.ok) return res.json({ success: true, method: result.method, target: cdp.title });
+                    } catch { /* fall through to VS Code command fallback */ }
+                }
+
+                // Fallback to VS Code command injection when CDP is unavailable or failed
+                if (this.primarySendFn) {
+                    try {
+                        const ok = await this.primarySendFn(message);
+                        if (ok) return res.json({ success: true, method: 'vscode_command', target: 'antigravity' });
+                    } catch { /* fall through to error */ }
+                }
+
+                if (!cdp) return res.status(503).json({ error: 'CDP not connected' });
+                res.status(500).json({ success: false, reason: 'editor_not_found' });
+            } finally {
+                this.sendInFlight = false;
             }
         });
 
@@ -736,7 +765,7 @@ export class AntigravityServer {
             try {
                 const result = await clickElement(activeCdp, text, tag, x, y, selector);
                 if (result.success) {
-                    setTimeout(() => this.updateSnapshot(), 50);
+                    setTimeout(() => this.updateSnapshot(true), 200);
                     return res.json({ success: true, target: activeCdp.title });
                 }
                 res.status(404).json({ error: 'Could not find element to click in active target' });

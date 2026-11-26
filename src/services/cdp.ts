@@ -50,7 +50,7 @@ export async function discoverInstances(): Promise<CDPInfo[]> {
     const strictWorkbenchOnly = (process.env.AG_STRICT_WORKBENCH_ONLY || 'true').toLowerCase() !== 'false';
     const includeFallbackTargets = (process.env.AG_INCLUDE_FALLBACK_TARGETS || 'false').toLowerCase() === 'true';
 
-    type RankedCandidate = CDPInfo & { __rank: number; __isWorkbench: boolean; __isJetski: boolean; __isLaunchpad: boolean };
+    type RankedCandidate = CDPInfo & { __rank: number; __isWorkbench: boolean; __isJetski: boolean; __isLaunchpad: boolean; __isExtensionView: boolean };
     const rankedCandidates: RankedCandidate[] = [];
 
     const listsByPort = await Promise.all(
@@ -82,8 +82,14 @@ export async function discoverInstances(): Promise<CDPInfo[]> {
             const isLaunchpad = lowerTitle.includes('launchpad');
             const isWorkbench = lowerUrl.includes('workbench.html');
             const isJetski = lowerUrl.includes('workbench-jetski-agent.html') || lowerUrl.includes('jetski');
+            // Antigravity IDE 2.0+ hosts the chat UI in a nested OOPIF served by `agy --hub`
+            // (e.g. http://127.0.0.1:<port>/?extensionView=true&...&hostVariant=antigravity-ide...)
+            const isExtensionView =
+                lowerUrl.includes('extensionview=true') ||
+                (lowerUrl.startsWith('http://127.0.0.1:') && lowerUrl.includes('hostvariant=antigravity'));
             const isBlank = title.trim().length === 0 || lowerTitle.startsWith('instance :');
             const looksChat =
+                isExtensionView ||
                 lowerTitle.includes('antigravity') ||
                 lowerUrl.includes('workbench') ||
                 lowerUrl.includes('jetski') ||
@@ -91,7 +97,7 @@ export async function discoverInstances(): Promise<CDPInfo[]> {
                 lowerUrl.includes('/assistant');
             const matchesFilter = !targetFilter || lowerTitle.includes(targetFilter) || lowerUrl.includes(targetFilter);
 
-            if (isSelf || isBridgeUi || isDevtools || isOwnExtensionWebview || isServiceWorker || isBlank || !looksChat) continue;
+            if (isSelf || isBridgeUi || isDevtools || isOwnExtensionWebview || isServiceWorker || (isBlank && !isExtensionView) || !looksChat) continue;
             if (!matchesFilter) continue;
             if (!t.webSocketDebuggerUrl) continue;
 
@@ -100,24 +106,38 @@ export async function discoverInstances(): Promise<CDPInfo[]> {
             seen.add(dedupeKey);
 
             let rank = 0;
+            if (isExtensionView) rank += 40;
             if (lowerUrl.includes('workbench.html') || lowerTitle.includes('workbench')) rank += 8;
             if (lowerUrl.includes('workbench-jetski-agent.html') || lowerUrl.includes('jetski')) rank += 6;
             if (lowerTitle.includes('antigravity')) rank += 3;
             if (isWebview) rank -= 1;
             if (isLaunchpad) rank -= 2;
-            if (strictWorkbenchOnly && isWorkbench) rank += 20;
+            if (strictWorkbenchOnly && (isWorkbench || isExtensionView)) rank += 20;
             if (!strictWorkbenchOnly && isJetski) rank -= 1;
             if (targetFilter && (lowerTitle.includes(targetFilter) || lowerUrl.includes(targetFilter))) rank += 20;
+
+            let displayTitle = title || `Instance :${port}`;
+            if (isExtensionView) {
+                try {
+                    const parsed = new URL(url);
+                    const wsUri = parsed.searchParams.get('workspaceUri') || '';
+                    const folder = wsUri ? decodeURIComponent(wsUri).replace(/\/+$/, '').split('/').pop() : '';
+                    displayTitle = folder ? `${folder} - Antigravity` : `Antigravity Chat (:${port})`;
+                } catch {
+                    displayTitle = `Antigravity Chat (:${port})`;
+                }
+            }
 
             rankedCandidates.push({
                 id: t.id || t.webSocketDebuggerUrl || `${port}-${title}`,
                 port,
                 url: t.webSocketDebuggerUrl,
-                title: title || `Instance :${port}`,
+                title: displayTitle,
                 __rank: rank,
                 __isWorkbench: isWorkbench,
                 __isJetski: isJetski,
-                __isLaunchpad: isLaunchpad
+                __isLaunchpad: isLaunchpad,
+                __isExtensionView: isExtensionView
             });
         }
     }
@@ -126,11 +146,11 @@ export async function discoverInstances(): Promise<CDPInfo[]> {
 
     let selected: RankedCandidate[] = [];
     if (strictWorkbenchOnly) {
-        // Primary: true workbench only, excluding Launchpad
-        selected = rankedCandidates.filter(c => c.__isWorkbench && !c.__isLaunchpad);
+        // Primary: Antigravity 2.0 extensionView iframe + classic workbench.html, excluding Launchpad
+        selected = rankedCandidates.filter(c => (c.__isExtensionView || c.__isWorkbench) && !c.__isLaunchpad);
         // Fallback for newer Antigravity layouts: include jetski/workbench-like targets except Launchpad
         if (selected.length === 0) {
-            selected = rankedCandidates.filter(c => (c.__isWorkbench || c.__isJetski) && !c.__isLaunchpad);
+            selected = rankedCandidates.filter(c => (c.__isExtensionView || c.__isWorkbench || c.__isJetski) && !c.__isLaunchpad);
         }
     } else {
         selected = rankedCandidates.filter(c => includeFallbackTargets || !c.__isLaunchpad);

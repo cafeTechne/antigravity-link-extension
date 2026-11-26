@@ -79,6 +79,7 @@ export interface Snapshot {
     colorScheme: string;
     bodyBg: string;
     bodyColor: string;
+    rootStyle?: string;
     error?: unknown;
 }
 

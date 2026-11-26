@@ -39,11 +39,12 @@ const CAPTURE_SCRIPT = `(() => {
 
         const toSelector = (el) => {
             if (!el || !el.tagName) return '';
-            if (el.id) return '#' + esc(el.id);
             const testId = el.getAttribute && el.getAttribute('data-testid');
             if (testId) return el.tagName.toLowerCase() + '[data-testid="' + esc(testId) + '"]';
+            if (el.id && !/^(base-ui-|:r)/.test(el.id)) return '#' + esc(el.id);
             const aria = el.getAttribute && el.getAttribute('aria-label');
             if (aria) return el.tagName.toLowerCase() + '[aria-label="' + esc(aria) + '"]';
+            if (el.id) return '#' + esc(el.id);
             const parts = [];
             let cur = el;
             let depth = 0;
@@ -85,9 +86,14 @@ const CAPTURE_SCRIPT = `(() => {
                 modePattern.test(item.text) && !modelPattern.test(item.text)
             ) || null;
 
-            const model = filtered.find((item) =>
-                item !== mode && modelPattern.test(item.text)
-            ) || null;
+            const modelTriggerEl = controlsRoot.querySelector('button[data-testid="model-selector-trigger"]') ||
+                document.querySelector('button[data-testid="model-selector-trigger"]');
+            const modelTriggerText = modelTriggerEl ? normalizeText(modelTriggerEl.innerText || modelTriggerEl.textContent || '') : '';
+            const model = (modelTriggerEl && modelTriggerText)
+                ? { el: modelTriggerEl, text: modelTriggerText }
+                : (filtered.find((item) =>
+                    item !== mode && modelPattern.test(item.text)
+                ) || null);
 
             // Stop/Task/Walkthrough are searched in document.body, not just the cascade,
             // because they may live in a toolbar or composer outside the cascade element.
@@ -140,6 +146,7 @@ const CAPTURE_SCRIPT = `(() => {
             '#messages',
             '#history',
             '#session',
+            '[data-testid="conversation-view"]',
             '[data-testid="cascade-root"]',
             '[data-testid="conversation-root"]',
             '[data-testid="chat-root"]',
@@ -147,6 +154,8 @@ const CAPTURE_SCRIPT = `(() => {
             '[data-testid*="chat" i]',
             '[data-testid*="conversation" i]',
             '[data-testid*="thread" i]',
+            '[data-testid="aux-pane-split"] > div:first-child',
+            '[data-testid="aux-pane-split"]',
             'main [id^="cascade"]',
             'main [id*="cascade"]',
             'main [id^="conversation"]',
@@ -171,7 +180,7 @@ const CAPTURE_SCRIPT = `(() => {
         // message element and the composer. This works regardless of container ID.
         try {
             const firstMsg = document.querySelector('[data-message-id], article[role="article"], [data-testid*="message" i]');
-            const composer = document.querySelector('[data-lexical-editor="true"][contenteditable="true"], [contenteditable="true"][role="textbox"]');
+            const composer = document.querySelector('[data-lexical-editor="true"][contenteditable="true"], [contenteditable="true"][role="textbox"], [contenteditable="true"][role="combobox"]');
             if (firstMsg && composer) {
                 let el = firstMsg.parentElement;
                 while (el && el !== document.body && el !== document.documentElement) {
@@ -185,11 +194,14 @@ const CAPTURE_SCRIPT = `(() => {
         const ranked = uniqueCandidates
             .map((el) => {
                 const id = (el.id || '').toLowerCase();
+                const testId = (el.getAttribute && el.getAttribute('data-testid') || '').toLowerCase();
+                const parentTestId = (el.parentElement && el.parentElement.getAttribute && el.parentElement.getAttribute('data-testid') || '').toLowerCase();
                 const className = String(el.className || '').toLowerCase();
                 const text = normalizeText(el.textContent || '');
-                const hasComposer = !!el.querySelector('[data-lexical-editor="true"][contenteditable="true"], [contenteditable="true"][role="textbox"], textarea');
+                const hasComposer = !!el.querySelector('[data-lexical-editor="true"][contenteditable="true"], [contenteditable="true"][role="textbox"], [contenteditable="true"][role="combobox"], textarea');
                 const hasMessageLike = !!el.querySelector('[data-message-id], [data-testid*="message" i], [class*="message"], article, [role="article"]');
                 let score = 0;
+                if (testId === 'conversation-view') score += 64;
                 if (id === 'cascade') score += 60;
                 if (id === 'conversation') score += 60;
                 if (id === 'chat') score += 56;
@@ -197,6 +209,8 @@ const CAPTURE_SCRIPT = `(() => {
                 if (id === 'messages') score += 50;
                 if (id === 'history') score += 46;
                 if (id === 'session') score += 44;
+                if (parentTestId === 'aux-pane-split') score += 42;
+                if (testId === 'aux-pane-split') score += 38;
                 if (id.includes('cascade')) score += 20;
                 if (id.includes('conversation')) score += 20;
                 if (id.includes('chat')) score += 12;
@@ -222,7 +236,7 @@ const CAPTURE_SCRIPT = `(() => {
 
         const surfaceSignals = {
             hasCascade: !!cascade,
-            hasComposer: !!controlsRoot.querySelector('[data-lexical-editor="true"][contenteditable="true"], [contenteditable="true"][role="textbox"], textarea'),
+            hasComposer: !!controlsRoot.querySelector('[data-lexical-editor="true"][contenteditable="true"], [contenteditable="true"][role="textbox"], [contenteditable="true"][role="combobox"], textarea'),
             hasMessages: !!controlsRoot.querySelector('[data-message-id], [data-testid*="message" i], [class*="message"], article, [role="article"]'),
             hasCommandPalette: !!document.querySelector('.quick-input-widget, [id*="quickInput" i], [aria-label*="Type a command" i]'),
             hasQuickPick: !!document.querySelector('.quick-input-widget, [class*="quick-input" i], [class*="quickpick" i]'),
@@ -232,10 +246,15 @@ const CAPTURE_SCRIPT = `(() => {
         let cleanHtml = fullBodyHtml;
         if (cascade) {
             const clone = cascade.cloneNode(true);
-            const composer = clone.querySelector('[data-lexical-editor="true"][contenteditable="true"], [contenteditable="true"][role="textbox"]');
+            const composer = clone.querySelector('[data-lexical-editor="true"][contenteditable="true"], [contenteditable="true"][role="textbox"], [contenteditable="true"][role="combobox"]');
             if (composer) {
-                // Case-insensitive [id*="input" i] catches antigravity.agentSidePanelInputBox.
-                const removableByClass = composer.closest('form, [class*="composer"], [id*="input" i], [id*="composer"]');
+                // Remove ONLY the text composer (#antigravity.agentSidePanelInputBox or form/composer)
+                // so sibling approval/permission cards ("Allow", "Reject", "Run") inside
+                // [data-testid="agent-input-box"] stay visible and clickable on mobile.
+                const removableByClass =
+                    composer.closest('#antigravity\\\\.agentSidePanelInputBox') ||
+                    composer.closest('form, [class*="composer"], [id*="input" i], [id*="composer"]') ||
+                    composer.closest('[data-testid="agent-input-box"]');
                 // Only use the cascade>child fallback if the cascade has multiple direct children.
                 // With a single child, that child contains both messages AND the composer — removing
                 // it would wipe all message content from the snapshot.
@@ -278,7 +297,8 @@ const CAPTURE_SCRIPT = `(() => {
             themeAttr: document.documentElement.getAttribute('data-theme') || '',
             colorScheme: rootStyles.colorScheme || 'dark',
             bodyBg: bodyStyles.backgroundColor,
-            bodyColor: bodyStyles.color
+            bodyColor: bodyStyles.color,
+            rootStyle: document.documentElement.getAttribute('style') || ''
         };
     } catch (e) {
         const err = (() => {
@@ -482,11 +502,14 @@ export async function injectMessage(cdp: CDPConnection, text: string): Promise<I
     const EXPRESSION = `(async () => {
         // Find visible editor - Broad discovery
         const editorSelectors = [
+            '[data-testid="agent-input-box"] [data-lexical-editor="true"][contenteditable="true"]',
+            '[data-testid="agent-input-box"] [contenteditable="true"]',
             '#conversation [data-lexical-editor="true"][contenteditable="true"]',
             '#cascade [data-lexical-editor="true"][contenteditable="true"]',
             '#chat [data-lexical-editor="true"][contenteditable="true"]',
             '#thread [data-lexical-editor="true"][contenteditable="true"]',
             '[data-lexical-editor="true"][contenteditable="true"]',
+            '[contenteditable="true"][role="combobox"]',
             '[contenteditable="true"][role="textbox"]',
             'div.max-h-\\\\[300px\\\\].rounded.cursor-text'
         ];
@@ -502,22 +525,82 @@ export async function injectMessage(cdp: CDPConnection, text: string): Promise<I
 
         if (!editor) return { ok:false, reason:"editor_not_found" };
 
-        editor.focus();
-        document.execCommand?.("selectAll", false, null);
-        document.execCommand?.("delete", false, null);
+        const selectAllInEditor = () => {
+            editor.focus();
+            try {
+                const range = document.createRange();
+                range.selectNodeContents(editor);
+                const sel = window.getSelection();
+                if (sel) {
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+            } catch {}
+        };
 
-        let inserted = false;
-        try { inserted = !!document.execCommand?.("insertText", false, ${safeText}); } catch {}
-        if (!inserted) {
-            editor.textContent = ${safeText};
-            editor.dispatchEvent(new InputEvent("beforeinput", { bubbles:true, inputType:"insertText", data:${safeText} }));
-            editor.dispatchEvent(new InputEvent("input", { bubbles:true, inputType:"insertText", data:${safeText} }));
+        const readEditorText = () => (editor.innerText || editor.textContent || '').trim();
+        const targetText = ${safeText};
+        const expectedTrimmed = targetText.trim();
+
+        // Clear any existing draft cleanly
+        selectAllInEditor();
+        if (readEditorText().length > 0) {
+            try {
+                editor.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, inputType: "deleteContentBackward" }));
+            } catch {}
+            try { document.execCommand?.("delete", false, null); } catch {}
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            selectAllInEditor();
         }
 
-        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        // Strategy 1 (Primary for Antigravity 2.0 / Lexical): ClipboardEvent('paste')
+        // Works reliably even when the OOPIF iframe is unfocused and updates Lexical's internal EditorState.
+        let inserted = false;
+        try {
+            const dt = new DataTransfer();
+            dt.setData("text/plain", targetText);
+            editor.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData: dt }));
+            await new Promise(r => setTimeout(r, 80));
+            const cur = readEditorText();
+            if (cur.length > 0 && (!expectedTrimmed || cur.includes(expectedTrimmed.slice(0, 40)))) {
+                inserted = true;
+            }
+        } catch {}
+
+        // Strategy 2: execCommand('insertText')
+        if (!inserted) {
+            selectAllInEditor();
+            try {
+                document.execCommand?.("insertText", false, targetText);
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+                const cur = readEditorText();
+                if (cur.length > 0 && (!expectedTrimmed || cur.includes(expectedTrimmed.slice(0, 40)))) {
+                    inserted = true;
+                }
+            } catch {}
+        }
+
+        // Strategy 3: beforeinput / input events (do not pre-mutate textContent if Lexical handles beforeinput)
+        if (!inserted) {
+            selectAllInEditor();
+            try {
+                editor.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, inputType: "insertText", data: targetText }));
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+                const cur = readEditorText();
+                if (cur.length > 0) inserted = true;
+            } catch {}
+        }
+
+        if (!inserted) {
+            editor.textContent = targetText;
+            editor.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: targetText }));
+        }
+
+        await new Promise(r => setTimeout(r, 100));
 
         // Submit Button Discovery
         const submitSelectors = [
+            'button[data-testid="send-button"]',
             'svg.lucide-arrow-right',
             'svg.lucide-arrow-up',
             'button[aria-label*="Send"]',
@@ -538,8 +621,8 @@ export async function injectMessage(cdp: CDPConnection, text: string): Promise<I
             return { ok:true, method:"click_submit" };
         }
 
-        editor.dispatchEvent(new KeyboardEvent("keydown", { bubbles:true, key:"Enter", code:"Enter" }));
-        editor.dispatchEvent(new KeyboardEvent("keyup", { bubbles:true, key:"Enter", code:"Enter" }));
+        editor.dispatchEvent(new KeyboardEvent("keydown", { bubbles:true, cancelable:true, key:"Enter", code:"Enter", keyCode:13, which:13 }));
+        editor.dispatchEvent(new KeyboardEvent("keyup", { bubbles:true, cancelable:true, key:"Enter", code:"Enter", keyCode:13, which:13 }));
         
         return { ok:true, method:"enter_keypress" };
     })()`;
@@ -610,20 +693,25 @@ export async function clickElement(
                  bubbles: true,
                  cancelable: true,
                  view: window,
+                 button: 0,
+                 buttons: 1,
                  clientX: clickX,
                  clientY: clickY,
                  screenX: clickX,
                  screenY: clickY
              };
 
+             // Proper browser event order (pointerdown -> mousedown -> pointerup -> mouseup -> native click)
+             // so Base UI (@base-ui/react) and Radix triggers/menuitems open and select cleanly.
+             try { el.dispatchEvent(new PointerEvent('pointerdown', opts)); } catch(e) {}
              el.dispatchEvent(new MouseEvent('mousedown', opts));
-             el.dispatchEvent(new MouseEvent('mouseup', opts));
-             el.dispatchEvent(new MouseEvent('click', opts));
-             
-             try {
-                 el.dispatchEvent(new PointerEvent('pointerdown', opts));
-                 el.dispatchEvent(new PointerEvent('pointerup', opts));
-             } catch(e) {}
+             try { el.dispatchEvent(new PointerEvent('pointerup', { ...opts, buttons: 0 })); } catch(e) {}
+             el.dispatchEvent(new MouseEvent('mouseup', { ...opts, buttons: 0 }));
+             if (typeof el.click === 'function') {
+                 el.click();
+             } else {
+                 el.dispatchEvent(new MouseEvent('click', { ...opts, buttons: 0 }));
+             }
              
              if (['INPUT', 'TEXTAREA'].includes(el.tagName) || el.getAttribute('contenteditable') === 'true') {
                  el.focus();
@@ -653,6 +741,16 @@ export async function clickElement(
             return null;
         }
 
+        // 0. Special action: dismiss any open popup/menu cleanly on the host IDE
+        if (selectorToFind === '__dismiss_menu__') {
+            const escOpts = { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true, cancelable: true };
+            (document.activeElement || document.body).dispatchEvent(new KeyboardEvent('keydown', escOpts));
+            document.dispatchEvent(new KeyboardEvent('keydown', escOpts));
+            const openTrigger = document.querySelector('button[data-testid="model-selector-trigger"][aria-expanded="true"]');
+            if (openTrigger) openTrigger.click();
+            return { success: true, method: 'dismiss_menu', target: 'Escape' };
+        }
+
         // 1. Selector (Highest Priority)
         if (selectorToFind) {
             const el = findInTree(document, (e) => {
@@ -664,7 +762,68 @@ export async function clickElement(
             }
         }
 
-        // 2. Coordinate-based interaction
+        // 2. Precise text match (Shadow-aware, preferring open menus/popups & interactive elements)
+        if (textToFind && textToFind.length > 0) {
+            const normText = (el) => (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim();
+            const openMenus = Array.from(document.querySelectorAll('[data-base-ui-portal] [role="menu"], [role="menu"][data-open], [role="listbox"][data-open], [data-base-ui-portal]'));
+            let menuMatch = null;
+            for (const menu of openMenus) {
+                const items = Array.from(menu.querySelectorAll('[role="menuitem"], [role="menuitemradio"], [role="option"], button, [role="button"]')).filter(isVisible);
+                menuMatch = items.find((el) => normText(el) === textToFind)
+                    || items.find((el) => normText(el).toLowerCase().startsWith(textToFind.toLowerCase()))
+                    || items.find((el) => normText(el).toLowerCase().includes(textToFind.toLowerCase()));
+                if (menuMatch) break;
+            }
+            if (menuMatch) {
+                clickElement(menuMatch);
+                return { success: true, method: 'menu_text_hit', target: textToFind };
+            }
+
+            // Prefer exact button / interactive element match (e.g. "Allow", "Reject", "Run")
+            // using the last visible match so active/bottom-most approval prompts win over old turns.
+            const interactiveCandidates = Array.from(document.querySelectorAll('button, [role="button"], [role="menuitem"], [role="option"], a[href]')).filter(isVisible);
+            const exactBtn = interactiveCandidates.filter((el) => normText(el) === textToFind).at(-1)
+                || interactiveCandidates.filter((el) => normText(el).toLowerCase() === textToFind.toLowerCase()).at(-1);
+            if (exactBtn) {
+                clickElement(exactBtn);
+                return { success: true, method: 'button_text_hit', target: textToFind };
+            }
+
+            const match = findInTree(document, (el) => {
+                const tag = el.tagName.toLowerCase();
+                const isCorrectTag = tagToFind === '*' || tag === tagToFind.toLowerCase();
+                if (!isCorrectTag) return false;
+                
+                const text = normText(el);
+                return text === textToFind && isVisible(el);
+            }) || findInTree(document, (el) => {
+                const tag = el.tagName.toLowerCase();
+                const isCorrectTag = tagToFind === '*' || tag === tagToFind.toLowerCase();
+                if (!isCorrectTag) return false;
+                
+                const text = normText(el);
+                return text.includes(textToFind) && isVisible(el);
+            });
+            
+            if (match) {
+                let interactive = match;
+                let parent = match.parentElement || (match.parentNode && match.parentNode.host ? match.parentNode.host : null);
+                while (parent && parent !== document.body) {
+                    const tag = parent.tagName.toLowerCase();
+                    const role = parent.getAttribute ? parent.getAttribute('role') : '';
+                    if (tag === 'button' || tag === 'a' || role === 'button' || role === 'menuitem' || role === 'menuitemradio' || role === 'option') {
+                        interactive = parent;
+                        break;
+                    }
+                    parent = parent.parentElement || (parent.parentNode && parent.parentNode.host ? parent.parentNode.host : null);
+                }
+
+                clickElement(interactive);
+                return { success: true, method: 'text_hit', target: textToFind };
+            }
+        }
+
+        // 3. Fallback: Coordinate-based interaction (only when selector and text did not match)
         if (typeof targetX === 'number' && typeof targetY === 'number') {
             const el = document.elementFromPoint(targetX, targetY);
             if (el) {
@@ -680,41 +839,6 @@ export async function clickElement(
                 }
                 clickElement(interactive);
                 return { success: true, method: 'coordinate_hit', target: interactive.tagName };
-            }
-        }
-
-        // 3. Fallback: Precise text match (Shadow-aware)
-        if (textToFind && textToFind.length > 0) {
-            const match = findInTree(document, (el) => {
-                const tag = el.tagName.toLowerCase();
-                const isCorrectTag = tagToFind === '*' || tag === tagToFind.toLowerCase();
-                if (!isCorrectTag) return false;
-                
-                const text = el.innerText || el.textContent || '';
-                return text.trim() === textToFind && isVisible(el);
-            }) || findInTree(document, (el) => {
-                const tag = el.tagName.toLowerCase();
-                const isCorrectTag = tagToFind === '*' || tag === tagToFind.toLowerCase();
-                if (!isCorrectTag) return false;
-                
-                const text = el.innerText || el.textContent || '';
-                return text.includes(textToFind) && isVisible(el);
-            });
-            
-            if (match) {
-                let interactive = match;
-                let parent = match.parentElement || (match.parentNode && match.parentNode.host ? match.parentNode.host : null);
-                while (parent && parent !== document.body) {
-                    const tag = parent.tagName.toLowerCase();
-                    if (tag === 'button' || tag === 'a' || parent.getAttribute('role') === 'button') {
-                        interactive = parent;
-                        break;
-                    }
-                    parent = parent.parentElement || (parent.parentNode && parent.parentNode.host ? parent.parentNode.host : null);
-                }
-
-                clickElement(interactive);
-                return { success: true, method: 'text_hit', target: textToFind };
             }
         }
 
@@ -736,6 +860,19 @@ export async function clickElement(
             }
         } catch (e) { }
     }
+
+    // Fallback: main world (no contextId)
+    try {
+        const result = await cdp.call("Runtime.evaluate", {
+            expression: CLICK_SCRIPT,
+            returnByValue: true,
+            awaitPromise: true
+        });
+        const val = result.result?.value as ClickResult;
+        if (val && val.success) {
+            return val;
+        }
+    } catch (e) { }
 
     return { success: false, reason: 'Could not find element' };
 }

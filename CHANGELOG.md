@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.21
+
+### Antigravity IDE 2.0 Compatibility & Bug Fixes
+
+- **OOPIF `extensionView` target discovery**: Discovers and prioritizes Antigravity IDE 2.0's nested `extensionView=true` / `hostVariant=antigravity` iframe target alongside classic `workbench.html`.
+- **Chat mirroring & theme rendering**: Captures `[data-testid="conversation-view"]` cleanly (excluding titlebar/sidebar), fixes `hasVisibleChatSurface()` so titlebar buttons no longer trigger Rescue Mode, forwards inline `--vscode-*` CSS custom properties (`rootStyle`) into the mobile shadow DOM, and skips no-op `innerHTML` re-renders on unchanged polls.
+- **Reliable Lexical message sending**: Uses `ClipboardEvent('paste')` insertion into Lexical (with `execCommand` and `beforeinput` fallbacks), prefers CDP injection when connected, and adds client `isSendingMessage` + server `sendInFlight` / 2.5 s deduplication guards.
+- **Base-UI model picker**: Prefers `data-testid` over volatile React/Base-UI IDs in `toSelector()`, fixes `clickElement()` event order (`pointerdown` → `mousedown` → `pointerup` → `mouseup` → `el.click()`), force-broadcasts snapshots after `/click`, skips hidden sidebar dialogs, and dismisses the PC menu when the mobile sheet is closed.
+- **Stop button stability**: Adds `isGenerating` to `updateControls()`'s signature, broadcasts fresh snapshots on state flips, and relies strictly on the ground-truth cancel button DOM state so ticking relative timestamps (`"3m ago"` → `"4m ago"`) no longer cause phantom stop-button cycling.
+- **Command approval dialogs ("Allow" / "Reject")**: Preserves the approval banner slot above `#antigravity.agentSidePanelInputBox` inside `[data-testid="agent-input-box"]`, strips `#mirrorContent` from forwarded selectors, removes mismatched mobile `(x, y)` coordinates from `/click`, and prioritizes button text matching so approval dialogs are visible and clickable from mobile.
+- **Artifact endpoints**: `/task` and `/walkthrough` now fall back to plain `task.md` and `walkthrough.md` in addition to `.resolved` files.
+
 ## 1.0.20
 
 ### Security
